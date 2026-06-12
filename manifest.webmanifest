@@ -1,0 +1,11 @@
+{
+  "name": "مخطط الأسابيع الذكي",
+  "short_name": "Week Planner",
+  "description": "مخطط مهام أسبوعي بثيم فاتح وداكن وحسابات محلية منفصلة.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#F6FAFD",
+  "theme_color": "#0A1931",
+  "dir": "rtl",
+  "lang": "ar"
+}

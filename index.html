@@ -1,0 +1,3529 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="مخطط أسابيع ذكي بمهام ومستخدمين محليين، قابل للنشر على GitHub Pages.">
+    <meta name="theme-color" content="#0A1931">
+    <link rel="manifest" href="./manifest.webmanifest">
+    <title>مخطط الأسابيع الذكي</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            color-scheme: light;
+            --page: #f6fafd;
+            --surface: #ffffff;
+            --surface-soft: #eef6fb;
+            --surface-strong: #b3cfe5;
+            --surface-glass: rgba(246, 250, 253, 0.9);
+            --ink: #0a1931;
+            --ink-soft: #1a3d63;
+            --muted: #4a7fa7;
+            --line: #b3cfe5;
+            --primary: #1a3d63;
+            --primary-strong: #0a1931;
+            --primary-soft: #ddeef8;
+            --accent: #4a7fa7;
+            --accent-soft: #eaf4fb;
+            --success: #4a7fa7;
+            --warning: #1a3d63;
+            --danger: #0a1931;
+            --archived: #1a3d63;
+            --wash-a: rgba(10, 25, 49, 0.12);
+            --wash-b: rgba(74, 127, 167, 0.28);
+            --wash-c: rgba(179, 207, 229, 0.46);
+            --shadow: 0 26px 80px rgba(10, 25, 49, 0.18);
+            --radius: 8px;
+        }
+
+        [data-theme="dark"] {
+            color-scheme: dark;
+            --page: #030913;
+            --surface: #071426;
+            --surface-soft: #0a1931;
+            --surface-strong: #1a3d63;
+            --surface-glass: rgba(7, 20, 38, 0.9);
+            --ink: #f6fafd;
+            --ink-soft: #b3cfe5;
+            --muted: #b3cfe5;
+            --line: #234769;
+            --primary: #b3cfe5;
+            --primary-strong: #f6fafd;
+            --primary-soft: #102b4b;
+            --accent: #4a7fa7;
+            --accent-soft: #0e2440;
+            --success: #b3cfe5;
+            --warning: #b3cfe5;
+            --danger: #f6fafd;
+            --archived: #050d19;
+            --wash-a: rgba(10, 25, 49, 0.88);
+            --wash-b: rgba(26, 61, 99, 0.58);
+            --wash-c: rgba(74, 127, 167, 0.18);
+            --shadow: 0 32px 90px rgba(0, 0, 0, 0.42);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html {
+            min-height: 100%;
+            scroll-behavior: smooth;
+        }
+
+        body {
+            min-height: 100vh;
+            margin: 0;
+            background:
+                linear-gradient(118deg, var(--wash-a), transparent 38%),
+                linear-gradient(226deg, var(--wash-b), transparent 40%),
+                linear-gradient(180deg, var(--wash-c), transparent 56%),
+                repeating-linear-gradient(145deg, transparent 0 18px, color-mix(in srgb, var(--line) 14%, transparent) 18px 19px),
+                var(--page);
+            background-attachment: fixed;
+            color: var(--ink);
+            font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+        }
+
+        button,
+        input,
+        select,
+        textarea {
+            font: inherit;
+        }
+
+        button {
+            color: inherit;
+        }
+
+        .app-shell {
+            width: min(1420px, calc(100% - 28px));
+            margin: 22px auto 38px;
+        }
+
+        .app-frame {
+            position: relative;
+            overflow: hidden;
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            background: var(--surface-glass);
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(18px);
+        }
+
+        .app-frame::before {
+            content: "";
+            display: block;
+            height: 7px;
+            background: linear-gradient(90deg, #0a1931 0 20%, #1a3d63 20% 40%, #4a7fa7 40% 62%, #b3cfe5 62% 82%, #f6fafd 82% 100%);
+        }
+
+        .app-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+            padding: 28px 24px 24px;
+            border-bottom: 1px solid var(--line);
+            background:
+                linear-gradient(100deg, color-mix(in srgb, var(--primary-soft) 78%, transparent), transparent 58%),
+                linear-gradient(260deg, color-mix(in srgb, var(--surface-strong) 30%, transparent), transparent 44%),
+                var(--surface);
+        }
+
+        .brand {
+            position: relative;
+            display: grid;
+            gap: 8px;
+            padding-inline-start: 18px;
+        }
+
+        .brand::before {
+            content: "";
+            position: absolute;
+            inset-block: 4px;
+            inset-inline-start: 0;
+            width: 6px;
+            border-radius: 999px;
+            background: linear-gradient(180deg, #0a1931, #1a3d63 34%, #4a7fa7 68%, #b3cfe5);
+        }
+
+        .date-line {
+            color: var(--primary-strong);
+            font-size: 14px;
+            font-weight: 800;
+        }
+
+        h1,
+        h2,
+        h3,
+        p {
+            margin: 0;
+        }
+
+        h1 {
+            font-size: 42px;
+            line-height: 1.05;
+            letter-spacing: 0;
+            color: var(--primary-strong);
+        }
+
+        .subtitle {
+            max-width: 760px;
+            color: var(--muted);
+            font-size: 16px;
+            line-height: 1.8;
+        }
+
+        .header-actions,
+        .toolbar,
+        .inline-actions,
+        .metric-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-chip {
+            min-height: 42px;
+            display: inline-flex;
+            align-items: center;
+            gap: 9px;
+            padding: 0 12px;
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            background: color-mix(in srgb, var(--surface) 84%, var(--surface-soft));
+            color: var(--ink);
+            cursor: pointer;
+            font-weight: 900;
+        }
+
+        .user-chip:hover {
+            border-color: var(--primary);
+            background: var(--primary-soft);
+        }
+
+        .avatar {
+            width: 26px;
+            height: 26px;
+            display: inline-grid;
+            place-items: center;
+            border-radius: 50%;
+            background: linear-gradient(145deg, #0a1931, #1a3d63 58%, #4a7fa7);
+            color: var(--surface);
+            font-size: 13px;
+            font-weight: 950;
+        }
+
+        .icon-button,
+        .text-button,
+        .danger-button {
+            min-height: 42px;
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            background: color-mix(in srgb, var(--surface) 86%, var(--surface-soft));
+            cursor: pointer;
+            transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+        }
+
+        .icon-button {
+            width: 42px;
+            display: inline-grid;
+            place-items: center;
+            font-size: 20px;
+            line-height: 1;
+        }
+
+        .text-button,
+        .danger-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 0 14px;
+            font-weight: 800;
+        }
+
+        .text-button.primary {
+            border-color: var(--primary);
+            background: linear-gradient(135deg, #0a1931, #1a3d63 58%, #4a7fa7);
+            color: #ffffff;
+            box-shadow: 0 10px 24px rgba(10, 25, 49, 0.16);
+        }
+
+        .danger-button {
+            color: var(--danger);
+        }
+
+        .icon-button:hover,
+        .text-button:hover,
+        .danger-button:hover {
+            transform: translateY(-1px);
+            border-color: var(--primary);
+            background: var(--primary-soft);
+            box-shadow: 0 10px 20px color-mix(in srgb, var(--primary) 12%, transparent);
+        }
+
+        .text-button.primary:hover {
+            background: var(--primary-strong);
+            color: #ffffff;
+        }
+
+        .control-band {
+            display: grid;
+            grid-template-columns: minmax(180px, 240px) auto minmax(240px, 1fr) minmax(170px, 210px);
+            gap: 12px;
+            padding: 18px 24px;
+            border-bottom: 1px solid var(--line);
+            background:
+                linear-gradient(90deg, color-mix(in srgb, var(--surface-soft) 82%, transparent), transparent),
+                var(--surface-soft);
+        }
+
+        .field,
+        .search-field {
+            display: grid;
+            gap: 7px;
+        }
+
+        label,
+        .field-label {
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 800;
+        }
+
+        select,
+        input,
+        textarea {
+            width: 100%;
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            background: color-mix(in srgb, var(--surface) 90%, var(--surface-soft));
+            color: var(--ink);
+            outline: none;
+            transition: border-color 0.18s ease, box-shadow 0.18s ease;
+        }
+
+        select,
+        input {
+            height: 44px;
+            padding: 0 12px;
+        }
+
+        textarea {
+            min-height: 118px;
+            resize: vertical;
+            padding: 12px;
+            line-height: 1.7;
+        }
+
+        select:focus,
+        input:focus,
+        textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 20%, transparent);
+        }
+
+        #year-select[data-status="past"] {
+            border-color: var(--archived);
+            background: var(--archived);
+            color: #ffffff;
+        }
+
+        #year-select[data-status="current"] {
+            border-color: var(--primary);
+            background: var(--primary-soft);
+            color: var(--primary-strong);
+        }
+
+        #year-select[data-status="future"] {
+            border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+            background: var(--accent-soft);
+            color: var(--warning);
+        }
+
+        .search-field {
+            position: relative;
+        }
+
+        .search-field input {
+            padding-inline-start: 44px;
+        }
+
+        .search-icon {
+            position: absolute;
+            inset-inline-start: 14px;
+            bottom: 11px;
+            color: var(--muted);
+            font-size: 18px;
+        }
+
+        .insights {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px;
+            padding: 18px 24px;
+            border-bottom: 1px solid var(--line);
+            background: color-mix(in srgb, var(--surface) 92%, var(--surface-soft));
+        }
+
+        .metric {
+            min-width: 0;
+            padding: 16px;
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            background:
+                linear-gradient(145deg, color-mix(in srgb, var(--surface) 82%, transparent), transparent),
+                var(--surface-soft);
+            box-shadow: inset 0 1px 0 color-mix(in srgb, #ffffff 55%, transparent);
+        }
+
+        .metric span {
+            display: block;
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 800;
+        }
+
+        .metric strong {
+            display: block;
+            margin-top: 6px;
+            font-size: 28px;
+            line-height: 1;
+            color: var(--primary-strong);
+        }
+
+        .progress-track {
+            height: 9px;
+            margin-top: 12px;
+            overflow: hidden;
+            border-radius: 999px;
+            background: var(--surface-strong);
+        }
+
+        .progress-fill {
+            width: 0%;
+            height: 100%;
+            border-radius: inherit;
+            background: linear-gradient(90deg, #0a1931, #1a3d63, #4a7fa7, #b3cfe5);
+            transition: width 0.25s ease;
+        }
+
+        .timeline {
+            padding: 20px 24px 16px;
+            border-bottom: 1px solid var(--line);
+            background:
+                linear-gradient(180deg, var(--surface), color-mix(in srgb, var(--surface-soft) 58%, var(--surface)));
+        }
+
+        .timeline-head {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 14px;
+            margin-bottom: 14px;
+        }
+
+        .week-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 6px;
+            font-size: 24px;
+        }
+
+        .week-range {
+            color: var(--muted);
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 34px;
+            padding: 0 12px;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            background: var(--surface-soft);
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 900;
+            white-space: nowrap;
+        }
+
+        .status-pill.past {
+            border-color: transparent;
+            background: linear-gradient(135deg, #0a1931, #1a3d63);
+            color: #ffffff;
+        }
+
+        .status-pill.current {
+            border-color: var(--primary);
+            background: var(--primary-soft);
+            color: var(--primary-strong);
+        }
+
+        .status-pill.future {
+            border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+            background: var(--accent-soft);
+            color: var(--warning);
+        }
+
+        .week-strip {
+            display: grid;
+            grid-auto-flow: column;
+            grid-auto-columns: minmax(118px, 132px);
+            gap: 10px;
+            overflow-x: auto;
+            padding: 4px 0 10px;
+            scrollbar-width: thin;
+        }
+
+        .week-strip::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .week-strip::-webkit-scrollbar-thumb {
+            border-radius: 999px;
+            background: color-mix(in srgb, var(--primary) 40%, var(--line));
+        }
+
+        .week-button {
+            min-height: 74px;
+            padding: 10px;
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            background: color-mix(in srgb, var(--surface-soft) 82%, var(--surface));
+            cursor: pointer;
+            text-align: start;
+            transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+        }
+
+        .week-button:hover {
+            transform: translateY(-1px);
+            border-color: var(--primary);
+        }
+
+        .week-button.active {
+            border-color: var(--primary);
+            background:
+                linear-gradient(160deg, color-mix(in srgb, var(--primary-soft) 88%, transparent), transparent),
+                var(--surface);
+            box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 40%, transparent);
+        }
+
+        .week-button.past {
+            background: linear-gradient(135deg, #0a1931, #1a3d63);
+            color: #ffffff;
+        }
+
+        .week-button.past .week-number {
+            text-decoration: line-through;
+            text-decoration-thickness: 2px;
+        }
+
+        .week-button.current {
+            border-color: var(--primary);
+        }
+
+        .week-button.future {
+            background: color-mix(in srgb, var(--accent-soft) 72%, var(--surface));
+        }
+
+        .week-number {
+            display: block;
+            font-size: 15px;
+            font-weight: 900;
+            white-space: nowrap;
+        }
+
+        .week-mini-date {
+            display: block;
+            margin-top: 6px;
+            color: currentColor;
+            font-size: 12px;
+            opacity: 0.78;
+            white-space: nowrap;
+        }
+
+        .workspace {
+            display: grid;
+            grid-template-columns: 270px minmax(0, 1fr);
+            min-height: 580px;
+            background: color-mix(in srgb, var(--surface) 88%, var(--surface-soft));
+        }
+
+        .phase-panel {
+            border-inline-end: 1px solid var(--line);
+            background:
+                linear-gradient(180deg, color-mix(in srgb, var(--surface-soft) 92%, transparent), transparent 82%),
+                var(--surface-soft);
+            padding: 18px;
+        }
+
+        .panel-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .panel-head h2 {
+            font-size: 18px;
+        }
+
+        .phase-list {
+            display: grid;
+            gap: 9px;
+        }
+
+        .phase-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 38px 38px;
+            gap: 7px;
+            align-items: center;
+        }
+
+        .phase-item {
+            display: grid;
+            grid-template-columns: 10px minmax(0, 1fr) auto;
+            gap: 10px;
+            align-items: center;
+            min-height: 48px;
+            padding: 0 10px;
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            background: color-mix(in srgb, var(--surface) 88%, var(--surface-soft));
+            cursor: pointer;
+            text-align: start;
+        }
+
+        .phase-item.active {
+            border-color: var(--primary);
+            background: var(--primary-soft);
+        }
+
+        .phase-color {
+            width: 10px;
+            height: 28px;
+            border-radius: 999px;
+            background: var(--phase-color, var(--primary));
+        }
+
+        .phase-name {
+            overflow: hidden;
+            font-weight: 900;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .phase-count {
+            min-width: 26px;
+            padding: 3px 7px;
+            border-radius: 999px;
+            background: color-mix(in srgb, var(--surface-strong) 72%, var(--surface));
+            color: var(--primary-strong);
+            font-size: 12px;
+            font-weight: 900;
+            text-align: center;
+        }
+
+        .mini-icon {
+            width: 38px;
+            height: 38px;
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            background: var(--surface);
+            cursor: pointer;
+        }
+
+        .mini-icon:hover {
+            border-color: var(--primary);
+            background: var(--primary-soft);
+        }
+
+        .planner {
+            min-width: 0;
+            padding: 18px;
+            background:
+                linear-gradient(180deg, var(--surface), color-mix(in srgb, var(--surface-soft) 78%, var(--surface))),
+                var(--surface);
+        }
+
+        .archive-note {
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            margin-bottom: 14px;
+            padding: 12px 14px;
+            border: 1px solid color-mix(in srgb, var(--archived) 45%, var(--line));
+            border-radius: var(--radius);
+            background: linear-gradient(135deg, #0a1931, #1a3d63);
+            color: #ffffff;
+            font-weight: 800;
+        }
+
+        .archive-note.show {
+            display: flex;
+        }
+
+        .days-grid {
+            display: grid;
+            grid-template-columns: repeat(7, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .day-card {
+            min-width: 0;
+            min-height: 360px;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            background: color-mix(in srgb, var(--surface) 92%, var(--surface-soft));
+            overflow: hidden;
+            box-shadow: 0 14px 30px color-mix(in srgb, var(--primary) 8%, transparent);
+        }
+
+        .day-card.past-day {
+            background: color-mix(in srgb, var(--surface) 68%, var(--archived));
+        }
+
+        .day-card.today {
+            border-color: var(--primary);
+            box-shadow:
+                inset 0 0 0 1px color-mix(in srgb, var(--primary) 40%, transparent),
+                0 18px 38px color-mix(in srgb, var(--primary) 14%, transparent);
+        }
+
+        .day-head {
+            min-height: 74px;
+            display: grid;
+            gap: 4px;
+            padding: 13px 13px 10px;
+            border-bottom: 1px solid var(--line);
+            background:
+                linear-gradient(135deg, color-mix(in srgb, var(--surface-soft) 88%, transparent), transparent),
+                var(--surface);
+        }
+
+        .day-name {
+            font-size: 16px;
+            font-weight: 950;
+        }
+
+        .day-date {
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        .day-card.past-day .day-name {
+            text-decoration: line-through;
+            text-decoration-thickness: 2px;
+        }
+
+        .task-list {
+            display: grid;
+            align-content: start;
+            gap: 9px;
+            flex: 1;
+            margin: 0;
+            padding: 12px;
+            list-style: none;
+        }
+
+        .task-item {
+            display: grid;
+            grid-template-columns: 28px minmax(0, 1fr) 32px;
+            gap: 8px;
+            align-items: start;
+            padding: 10px;
+            border: 1px solid var(--line);
+            border-inline-start: 4px solid var(--primary);
+            border-radius: var(--radius);
+            background: color-mix(in srgb, var(--surface-soft) 86%, var(--surface));
+        }
+
+        .task-item[data-priority="high"] {
+            border-inline-start-color: var(--danger);
+        }
+
+        .task-item[data-priority="normal"] {
+            border-inline-start-color: var(--accent);
+        }
+
+        .task-item[data-priority="low"] {
+            border-inline-start-color: var(--success);
+        }
+
+        .task-item.done {
+            opacity: 0.72;
+        }
+
+        .task-item.done .task-text {
+            text-decoration: line-through;
+            text-decoration-thickness: 2px;
+        }
+
+        .task-check {
+            width: 22px;
+            height: 22px;
+            margin-top: 1px;
+            accent-color: var(--primary);
+            cursor: pointer;
+        }
+
+        .task-main {
+            min-width: 0;
+            padding: 0;
+            border: none;
+            background: transparent;
+            color: inherit;
+            cursor: pointer;
+            text-align: start;
+        }
+
+        .task-text {
+            display: block;
+            overflow-wrap: anywhere;
+            line-height: 1.55;
+            font-size: 14px;
+            font-weight: 800;
+        }
+
+        .task-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+            color: var(--muted);
+            font-size: 11px;
+            font-weight: 900;
+        }
+
+        .meta-chip {
+            padding: 2px 7px;
+            border-radius: 999px;
+            background: color-mix(in srgb, var(--surface-strong) 62%, var(--surface));
+            color: var(--ink-soft);
+        }
+
+        .delete-task {
+            width: 32px;
+            height: 32px;
+            border: 1px solid transparent;
+            border-radius: var(--radius);
+            background: transparent;
+            color: var(--danger);
+            cursor: pointer;
+            font-size: 18px;
+            line-height: 1;
+        }
+
+        .delete-task:hover {
+            border-color: color-mix(in srgb, var(--danger) 45%, var(--line));
+            background: color-mix(in srgb, var(--danger) 12%, transparent);
+        }
+
+        .empty-state {
+            padding: 16px 12px;
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 800;
+            line-height: 1.7;
+            text-align: center;
+        }
+
+        .add-task {
+            min-height: 44px;
+            margin: 0 12px 12px;
+            border: 1px dashed var(--primary);
+            border-radius: var(--radius);
+            background: transparent;
+            color: var(--primary-strong);
+            cursor: pointer;
+            font-weight: 950;
+        }
+
+        .add-task:hover {
+            background: var(--primary-soft);
+        }
+
+        dialog {
+            width: min(560px, calc(100% - 28px));
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            background:
+                linear-gradient(180deg, color-mix(in srgb, var(--surface) 92%, transparent), transparent),
+                var(--surface-soft);
+            color: var(--ink);
+            box-shadow: var(--shadow);
+        }
+
+        dialog::backdrop {
+            background: rgba(3, 9, 19, 0.66);
+            backdrop-filter: blur(5px);
+        }
+
+        .dialog-form {
+            display: grid;
+            gap: 16px;
+        }
+
+        .dialog-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .dialog-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .dialog-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            padding-top: 4px;
+        }
+
+        .auth-note {
+            padding: 12px;
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            background:
+                linear-gradient(135deg, color-mix(in srgb, var(--primary-soft) 76%, transparent), transparent),
+                var(--surface);
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 800;
+            line-height: 1.7;
+        }
+
+        .profile-list {
+            display: grid;
+            gap: 8px;
+        }
+
+        .profile-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 8px;
+            align-items: center;
+            padding: 9px;
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            background: color-mix(in srgb, var(--surface) 88%, var(--surface-soft));
+        }
+
+        .profile-row strong {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .swatches {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 9px;
+        }
+
+        .swatch {
+            position: relative;
+            width: 40px;
+            height: 40px;
+            border-radius: var(--radius);
+            cursor: pointer;
+        }
+
+        .swatch input {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .swatch span {
+            display: block;
+            width: 100%;
+            height: 100%;
+            border: 2px solid transparent;
+            border-radius: inherit;
+            background: var(--swatch-color);
+        }
+
+        .swatch input:checked + span {
+            border-color: var(--ink);
+            box-shadow: 0 0 0 3px var(--surface), 0 0 0 5px var(--primary);
+        }
+
+        @media (max-width: 1180px) {
+            .days-grid {
+                grid-template-columns: repeat(4, minmax(170px, 1fr));
+            }
+        }
+
+        @media (max-width: 900px) {
+            .app-header,
+            .timeline-head,
+            .archive-note {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            .header-actions,
+            .toolbar {
+                justify-content: flex-start;
+            }
+
+            .control-band {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .search-field {
+                grid-column: 1 / -1;
+            }
+
+            .insights {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .workspace {
+                grid-template-columns: 1fr;
+            }
+
+            .phase-panel {
+                border-inline-end: none;
+                border-bottom: 1px solid var(--line);
+            }
+
+            .phase-list {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .days-grid {
+                grid-template-columns: repeat(2, minmax(160px, 1fr));
+            }
+        }
+
+        @media (max-width: 620px) {
+            .app-shell {
+                width: min(100% - 16px, 1420px);
+                margin-top: 8px;
+            }
+
+            .app-header,
+            .control-band,
+            .insights,
+            .timeline,
+            .planner,
+            .phase-panel {
+                padding: 14px;
+            }
+
+            h1 {
+                font-size: 30px;
+            }
+
+            .control-band,
+            .insights,
+            .phase-list,
+            .days-grid,
+            .dialog-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .week-strip {
+                grid-auto-columns: minmax(112px, 124px);
+            }
+        }
+
+        /* ── Splash Screen ─────────────────────────────── */
+        .overlay-screen {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #030913 0%, #0a1931 50%, #1a3d63 100%);
+        }
+        .overlay-screen.hidden { display: none; }
+
+        .splash-content { text-align: center; color: #f6fafd; }
+        .splash-icon {
+            font-size: 4.5rem;
+            margin-bottom: 20px;
+            display: block;
+            animation: floatIcon 2.4s ease-in-out infinite;
+        }
+        @keyframes floatIcon {
+            0%, 100% { transform: translateY(0); }
+            50%       { transform: translateY(-12px); }
+        }
+        .splash-title {
+            font-size: 2.2rem;
+            font-weight: 800;
+            margin-bottom: 6px;
+            letter-spacing: -0.5px;
+        }
+        .splash-sub {
+            opacity: 0.6;
+            margin-bottom: 44px;
+            letter-spacing: 2px;
+            font-size: 0.9rem;
+        }
+        .splash-bar {
+            width: 220px;
+            height: 4px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 999px;
+            margin: 0 auto;
+            overflow: hidden;
+        }
+        .splash-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #4a7fa7, #b3cfe5, #f6fafd);
+            border-radius: 999px;
+            animation: fillBar 2.2s ease-in-out forwards;
+        }
+        @keyframes fillBar {
+            from { width: 0%; }
+            to   { width: 100%; }
+        }
+
+        /* ── Auth Screen ───────────────────────────────── */
+        .auth-card {
+            background: rgba(246, 250, 253, 0.97);
+            border-radius: 20px;
+            padding: 40px 36px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 40px 100px rgba(0,0,0,0.4);
+            animation: slideUp 0.38s ease;
+        }
+        [data-theme="dark"] .auth-card {
+            background: rgba(7, 20, 38, 0.97);
+            border: 1px solid #1a3d63;
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(28px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .auth-brand { text-align: center; margin-bottom: 28px; }
+        .auth-logo { font-size: 3rem; margin-bottom: 10px; display: block; }
+        .auth-brand h2 {
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: #0a1931;
+            margin-bottom: 4px;
+        }
+        [data-theme="dark"] .auth-brand h2 { color: #f6fafd; }
+        .auth-brand p { color: #4a7fa7; font-size: 0.82rem; letter-spacing: 1.5px; }
+
+        .auth-form { display: none; }
+        .auth-form.active-form { display: block; }
+        .auth-form h3 {
+            font-size: 1.05rem;
+            font-weight: 800;
+            text-align: center;
+            margin-bottom: 20px;
+            color: #0a1931;
+        }
+        [data-theme="dark"] .auth-form h3 { color: #f6fafd; }
+
+        .auth-field { margin-bottom: 13px; }
+        .auth-field input {
+            width: 100%;
+            padding: 12px 14px;
+            height: auto;
+            border: 1.5px solid #b3cfe5;
+            border-radius: 8px;
+            background: #f6fafd;
+            color: #0a1931;
+            font: inherit;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        [data-theme="dark"] .auth-field input {
+            background: #0a1931;
+            color: #f6fafd;
+            border-color: #1a3d63;
+        }
+        .auth-field input:focus {
+            border-color: #1a3d63;
+            box-shadow: 0 0 0 3px rgba(26,61,99,0.18);
+        }
+        .auth-btn {
+            width: 100%;
+            padding: 13px;
+            background: linear-gradient(135deg, #0a1931, #1a3d63 50%, #4a7fa7);
+            color: #f6fafd;
+            border: none;
+            border-radius: 8px;
+            font: inherit;
+            font-size: 1rem;
+            font-weight: 800;
+            cursor: pointer;
+            margin-top: 4px;
+            transition: opacity 0.2s, transform 0.2s, box-shadow 0.2s;
+        }
+        .auth-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(10,25,49,0.3); }
+        .auth-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+        .auth-error   { color: #c0392b; font-size: 0.82rem; margin: 6px 0; min-height: 18px; text-align: center; }
+        .auth-success { color: #27ae60; font-size: 0.82rem; margin: 6px 0; text-align: center; }
+        .auth-switch {
+            text-align: center;
+            margin-top: 16px;
+            font-size: 0.88rem;
+            color: #4a7fa7;
+        }
+        .auth-switch span {
+            color: #0a1931;
+            cursor: pointer;
+            font-weight: 800;
+            text-decoration: underline;
+            text-underline-offset: 2px;
+        }
+        [data-theme="dark"] .auth-switch span { color: #b3cfe5; }
+    </style>
+</head>
+<body>
+
+    <!-- Splash Screen -->
+    <div id="splash-screen" class="overlay-screen">
+        <div class="splash-content">
+            <span class="splash-icon">📅</span>
+            <div class="splash-title">مخطط الأسابيع الذكي</div>
+            <p class="splash-sub">SMART WEEK PLANNER</p>
+            <div class="splash-bar"><div class="splash-fill"></div></div>
+        </div>
+    </div>
+
+    <!-- Auth Screen -->
+    <div id="auth-screen" class="overlay-screen hidden">
+        <div class="auth-card">
+            <div class="auth-brand">
+                <span class="auth-logo">📅</span>
+                <h2>مخطط الأسابيع الذكي</h2>
+                <p>SMART WEEK PLANNER</p>
+            </div>
+
+            <form id="login-form" class="auth-form active-form" novalidate>
+                <h3>تسجيل الدخول</h3>
+                <div class="auth-field">
+                    <input id="login-email" type="email" placeholder="البريد الإلكتروني" autocomplete="email" required>
+                </div>
+                <div class="auth-field">
+                    <input id="login-pass" type="password" placeholder="كلمة المرور" autocomplete="current-password" required>
+                </div>
+                <p id="login-error" class="auth-error"></p>
+                <button id="login-btn" class="auth-btn" type="submit">دخول</button>
+                <p class="auth-switch">ليس لديك حساب؟ <span id="go-signup">سجّل الآن</span></p>
+            </form>
+
+            <form id="signup-form" class="auth-form" novalidate>
+                <h3>إنشاء حساب جديد</h3>
+                <div class="auth-field">
+                    <input id="signup-name" type="text" placeholder="الاسم" autocomplete="name" required>
+                </div>
+                <div class="auth-field">
+                    <input id="signup-email" type="email" placeholder="البريد الإلكتروني" autocomplete="email" required>
+                </div>
+                <div class="auth-field">
+                    <input id="signup-pass" type="password" placeholder="كلمة المرور (6 خانات على الأقل)" autocomplete="new-password" required>
+                </div>
+                <p id="signup-error" class="auth-error"></p>
+                <p id="signup-success" class="auth-success"></p>
+                <button id="signup-btn" class="auth-btn" type="submit">إنشاء حساب</button>
+                <p class="auth-switch">لديك حساب؟ <span id="go-login">سجّل دخولك</span></p>
+            </form>
+        </div>
+    </div>
+
+    <div class="app-shell" id="app-shell" style="display:none">
+        <div class="app-frame">
+            <header class="app-header">
+                <div class="brand">
+                    <div class="date-line" id="today-line"></div>
+                    <h1 id="app-title"></h1>
+                    <p class="subtitle" id="app-subtitle"></p>
+                </div>
+                <div class="header-actions">
+                    <div class="user-chip" id="account-button" style="cursor:default">
+                        <span class="avatar" id="account-avatar">م</span>
+                        <span id="account-name"></span>
+                    </div>
+                    <button class="icon-button" id="signout-button" type="button" title="تسجيل الخروج" aria-label="تسجيل الخروج">⏏</button>
+                    <button class="icon-button" id="theme-toggle" type="button" title="تبديل المظهر" aria-label="تبديل المظهر">☾</button>
+                    <button class="text-button" id="lang-toggle" type="button">EN</button>
+                </div>
+            </header>
+
+            <section class="control-band" aria-label="أدوات التخطيط">
+                <div class="field">
+                    <label for="year-select" id="year-label"></label>
+                    <select id="year-select"></select>
+                </div>
+                <div class="field">
+                    <span class="field-label" id="jump-label"></span>
+                    <button class="text-button primary" id="today-button" type="button"></button>
+                </div>
+                <div class="search-field">
+                    <label for="search-input" id="search-label"></label>
+                    <span class="search-icon" aria-hidden="true">⌕</span>
+                    <input id="search-input" type="search" autocomplete="off">
+                </div>
+                <div class="field">
+                    <label for="filter-select" id="filter-label"></label>
+                    <select id="filter-select"></select>
+                </div>
+            </section>
+
+            <section class="insights" aria-label="ملخص الأسبوع">
+                <div class="metric">
+                    <span id="metric-total-label"></span>
+                    <strong id="metric-total">0</strong>
+                </div>
+                <div class="metric">
+                    <span id="metric-done-label"></span>
+                    <strong id="metric-done">0</strong>
+                </div>
+                <div class="metric">
+                    <span id="metric-left-label"></span>
+                    <strong id="metric-left">0</strong>
+                </div>
+                <div class="metric">
+                    <span id="metric-progress-label"></span>
+                    <strong id="metric-progress">0%</strong>
+                    <div class="progress-track" aria-hidden="true">
+                        <div class="progress-fill" id="progress-fill"></div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="timeline" aria-label="الأسابيع">
+                <div class="timeline-head">
+                    <div>
+                        <h2 class="week-title" id="week-title"></h2>
+                        <p class="week-range" id="week-range"></p>
+                    </div>
+                    <span class="status-pill" id="week-status"></span>
+                </div>
+                <div class="week-strip" id="week-strip"></div>
+            </section>
+
+            <main class="workspace">
+                <aside class="phase-panel" aria-label="المراحل">
+                    <div class="panel-head">
+                        <h2 id="phases-title"></h2>
+                        <button class="icon-button" id="add-phase-button" type="button" title="إضافة مرحلة" aria-label="إضافة مرحلة">+</button>
+                    </div>
+                    <div class="phase-list" id="phase-list"></div>
+                </aside>
+
+                <section class="planner" aria-label="مخطط الأيام">
+                    <div class="archive-note" id="archive-note">
+                        <span id="archive-note-text"></span>
+                        <button class="text-button" id="archive-today-button" type="button"></button>
+                    </div>
+                    <div class="days-grid" id="days-container"></div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    </div>
+
+    <dialog id="account-dialog">
+        <form class="dialog-form" id="account-form">
+            <div class="dialog-head">
+                <h3 id="account-dialog-title"></h3>
+                <button class="icon-button" type="button" id="close-account-dialog" aria-label="إغلاق">×</button>
+            </div>
+            <p class="auth-note" id="account-note"></p>
+            <div class="field">
+                <label for="account-input" id="account-input-label"></label>
+                <input id="account-input" maxlength="36" autocomplete="username" required>
+            </div>
+            <div class="field">
+                <label for="account-passcode" id="account-passcode-label"></label>
+                <input id="account-passcode" type="password" maxlength="72" autocomplete="current-password" required>
+            </div>
+            <div class="field">
+                <span class="field-label" id="profiles-label"></span>
+                <div class="profile-list" id="profile-list"></div>
+            </div>
+            <div class="dialog-actions">
+                <button class="text-button" type="button" id="cancel-account-button"></button>
+                <button class="text-button primary" type="submit" id="save-account-button"></button>
+            </div>
+        </form>
+    </dialog>
+
+    <dialog id="task-dialog">
+        <form class="dialog-form" id="task-form">
+            <div class="dialog-head">
+                <h3 id="task-dialog-title"></h3>
+                <button class="icon-button" type="button" id="close-task-dialog" aria-label="إغلاق">×</button>
+            </div>
+            <div class="field">
+                <label for="task-text" id="task-text-label"></label>
+                <textarea id="task-text" maxlength="180" required></textarea>
+            </div>
+            <div class="dialog-grid">
+                <div class="field">
+                    <label for="task-priority" id="task-priority-label"></label>
+                    <select id="task-priority"></select>
+                </div>
+                <div class="field">
+                    <label for="task-time" id="task-time-label"></label>
+                    <input id="task-time" type="time">
+                </div>
+            </div>
+            <div class="dialog-actions">
+                <button class="text-button" type="button" id="cancel-task-button"></button>
+                <button class="text-button primary" type="submit" id="save-task-button"></button>
+            </div>
+        </form>
+    </dialog>
+
+    <dialog id="phase-dialog">
+        <form class="dialog-form" id="phase-form">
+            <div class="dialog-head">
+                <h3 id="phase-dialog-title"></h3>
+                <button class="icon-button" type="button" id="close-phase-dialog" aria-label="إغلاق">×</button>
+            </div>
+            <div class="field">
+                <label for="phase-name" id="phase-name-label"></label>
+                <input id="phase-name" maxlength="32" required>
+            </div>
+            <div class="field">
+                <span class="field-label" id="phase-color-label"></span>
+                <div class="swatches" id="phase-swatches"></div>
+            </div>
+            <div class="dialog-actions">
+                <button class="text-button" type="button" id="cancel-phase-button"></button>
+                <button class="text-button primary" type="submit" id="save-phase-button"></button>
+            </div>
+        </form>
+    </dialog>
+
+    <script>
+        (() => {
+            "use strict";
+
+            /* ── Supabase ─────────────────────────────────────────── */
+            const SUPABASE_URL  = 'https://eedmanyydspgyxjpzxae.supabase.co';
+            const SUPABASE_ANON = 'sb_publishable_TjqQ_1GgM3MjMRfB5PNrDA_BaHac350';
+            const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+            /* ── Constants ────────────────────────────────────────── */
+            const CACHE_KEY_PREFIX = "weeklyPlanner.cloud.v1";
+            const DAY_MS           = 24 * 60 * 60 * 1000;
+            const today            = startOfDay(new Date());
+            const todayYear        = today.getFullYear();
+            const currentPlannerWeek = getPlannerWeekForDate(today);
+            const phaseColors      = ["#0A1931", "#1A3D63", "#4A7FA7", "#B3CFE5", "#F6FAFD"];
+
+            /* ── Labels (bilingual) ───────────────────────────────── */
+            const labels = {
+                ar: {
+                    appTitle: "مخطط الأسابيع الذكي",
+                    subtitle: "مساحة مرتبة للسنة، الأسابيع، المراحل، والمهام اليومية مع أرشفة تلقائية حسب التاريخ الفعلي.",
+                    account: "الحساب",
+                    accountTitle: "حسابك",
+                    localUser: "مستخدم",
+                    todayPrefix: "اليوم",
+                    year: "السنة",
+                    jump: "انتقال",
+                    goToday: "اليوم",
+                    search: "البحث",
+                    searchPlaceholder: "ابحث داخل هذا الأسبوع",
+                    filter: "العرض",
+                    filters: {
+                        all: "كل المهام",
+                        active: "غير المنجزة",
+                        done: "المنجزة",
+                        high: "الأولوية العالية"
+                    },
+                    total: "إجمالي المهام",
+                    done: "منجزة",
+                    left: "متبقية",
+                    progress: "التقدم",
+                    week: "الأسبوع",
+                    phases: "المراحل",
+                    current: "حالي",
+                    past: "منتهي",
+                    future: "قادم",
+                    pastYear: "سنة منتهية",
+                    currentYear: "السنة الحالية",
+                    futureYear: "سنة قادمة",
+                    archiveNote: "هذا أسبوع أو سنة منتهية. المحتوى ظاهر كامل للأرشفة والمراجعة.",
+                    days: ["السبت", "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"],
+                    addTask: "إضافة",
+                    empty: "لا توجد مهام هنا.",
+                    emptyFiltered: "لا توجد مهام مطابقة.",
+                    edit: "تعديل",
+                    delete: "حذف",
+                    taskTitleNew: "مهمة جديدة",
+                    taskTitleEdit: "تعديل المهمة",
+                    taskText: "المهمة",
+                    taskPriority: "الأولوية",
+                    taskTime: "الوقت",
+                    priorities: { low: "هادئة", normal: "متوسطة", high: "عالية" },
+                    cancel: "إلغاء",
+                    save: "حفظ",
+                    phaseTitleNew: "مرحلة جديدة",
+                    phaseTitleEdit: "تعديل المرحلة",
+                    phaseName: "اسم المرحلة",
+                    phaseColor: "لون المرحلة",
+                    deleteTaskConfirm: "حذف هذه المهمة؟",
+                    deletePhaseConfirm: "حذف المرحلة وكل مهامها؟",
+                    lastPhaseWarning: "لا يمكن حذف آخر مرحلة.",
+                    defaultPhases: { study: "الدراسة", work: "العمل", personal: "شخصي" },
+                    signOutConfirm: "هل تريد تسجيل الخروج؟"
+                },
+                en: {
+                    appTitle: "Smart Week Planner",
+                    subtitle: "A clean yearly workspace for weeks, phases, and daily tasks with automatic date-based archiving.",
+                    account: "Account",
+                    accountTitle: "Your account",
+                    localUser: "User",
+                    todayPrefix: "Today",
+                    year: "Year",
+                    jump: "Jump",
+                    goToday: "Today",
+                    search: "Search",
+                    searchPlaceholder: "Search this week",
+                    filter: "View",
+                    filters: { all: "All tasks", active: "Open tasks", done: "Completed", high: "High priority" },
+                    total: "Total tasks",
+                    done: "Done",
+                    left: "Left",
+                    progress: "Progress",
+                    week: "Week",
+                    phases: "Phases",
+                    current: "Current",
+                    past: "Ended",
+                    future: "Upcoming",
+                    pastYear: "Ended year",
+                    currentYear: "Current year",
+                    futureYear: "Upcoming year",
+                    archiveNote: "This week or year has ended. Its content stays visible for review.",
+                    days: ["Saturday", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+                    addTask: "Add",
+                    empty: "No tasks here.",
+                    emptyFiltered: "No matching tasks.",
+                    edit: "Edit",
+                    delete: "Delete",
+                    taskTitleNew: "New task",
+                    taskTitleEdit: "Edit task",
+                    taskText: "Task",
+                    taskPriority: "Priority",
+                    taskTime: "Time",
+                    priorities: { low: "Low", normal: "Medium", high: "High" },
+                    cancel: "Cancel",
+                    save: "Save",
+                    phaseTitleNew: "New phase",
+                    phaseTitleEdit: "Edit phase",
+                    phaseName: "Phase name",
+                    phaseColor: "Phase color",
+                    deleteTaskConfirm: "Delete this task?",
+                    deletePhaseConfirm: "Delete this phase and all its tasks?",
+                    lastPhaseWarning: "You cannot delete the last phase.",
+                    defaultPhases: { study: "Study", work: "Work", personal: "Personal" },
+                    signOutConfirm: "Sign out?"
+                }
+            };
+
+            /* ── DOM refs ─────────────────────────────────────────── */
+            const dom = {
+                root: document.documentElement,
+                splash: document.getElementById("splash-screen"),
+                authScreen: document.getElementById("auth-screen"),
+                appShell: document.getElementById("app-shell"),
+                loginForm: document.getElementById("login-form"),
+                signupForm: document.getElementById("signup-form"),
+                loginEmail: document.getElementById("login-email"),
+                loginPass: document.getElementById("login-pass"),
+                loginBtn: document.getElementById("login-btn"),
+                loginError: document.getElementById("login-error"),
+                signupName: document.getElementById("signup-name"),
+                signupEmail: document.getElementById("signup-email"),
+                signupPass: document.getElementById("signup-pass"),
+                signupBtn: document.getElementById("signup-btn"),
+                signupError: document.getElementById("signup-error"),
+                signupSuccess: document.getElementById("signup-success"),
+                goSignup: document.getElementById("go-signup"),
+                goLogin: document.getElementById("go-login"),
+                todayLine: document.getElementById("today-line"),
+                appTitle: document.getElementById("app-title"),
+                appSubtitle: document.getElementById("app-subtitle"),
+                accountButton: document.getElementById("account-button"),
+                accountAvatar: document.getElementById("account-avatar"),
+                accountName: document.getElementById("account-name"),
+                signoutButton: document.getElementById("signout-button"),
+                themeToggle: document.getElementById("theme-toggle"),
+                langToggle: document.getElementById("lang-toggle"),
+                yearLabel: document.getElementById("year-label"),
+                yearSelect: document.getElementById("year-select"),
+                jumpLabel: document.getElementById("jump-label"),
+                todayButton: document.getElementById("today-button"),
+                archiveTodayButton: document.getElementById("archive-today-button"),
+                searchLabel: document.getElementById("search-label"),
+                searchInput: document.getElementById("search-input"),
+                filterLabel: document.getElementById("filter-label"),
+                filterSelect: document.getElementById("filter-select"),
+                metricTotalLabel: document.getElementById("metric-total-label"),
+                metricDoneLabel: document.getElementById("metric-done-label"),
+                metricLeftLabel: document.getElementById("metric-left-label"),
+                metricProgressLabel: document.getElementById("metric-progress-label"),
+                metricTotal: document.getElementById("metric-total"),
+                metricDone: document.getElementById("metric-done"),
+                metricLeft: document.getElementById("metric-left"),
+                metricProgress: document.getElementById("metric-progress"),
+                progressFill: document.getElementById("progress-fill"),
+                weekTitle: document.getElementById("week-title"),
+                weekRange: document.getElementById("week-range"),
+                weekStatus: document.getElementById("week-status"),
+                weekStrip: document.getElementById("week-strip"),
+                phasesTitle: document.getElementById("phases-title"),
+                phaseList: document.getElementById("phase-list"),
+                addPhaseButton: document.getElementById("add-phase-button"),
+                archiveNote: document.getElementById("archive-note"),
+                archiveNoteText: document.getElementById("archive-note-text"),
+                daysContainer: document.getElementById("days-container"),
+                taskDialog: document.getElementById("task-dialog"),
+                taskForm: document.getElementById("task-form"),
+                taskDialogTitle: document.getElementById("task-dialog-title"),
+                taskTextLabel: document.getElementById("task-text-label"),
+                taskText: document.getElementById("task-text"),
+                taskPriorityLabel: document.getElementById("task-priority-label"),
+                taskPriority: document.getElementById("task-priority"),
+                taskTimeLabel: document.getElementById("task-time-label"),
+                taskTime: document.getElementById("task-time"),
+                closeTaskDialog: document.getElementById("close-task-dialog"),
+                cancelTaskButton: document.getElementById("cancel-task-button"),
+                saveTaskButton: document.getElementById("save-task-button"),
+                phaseDialog: document.getElementById("phase-dialog"),
+                phaseForm: document.getElementById("phase-form"),
+                phaseDialogTitle: document.getElementById("phase-dialog-title"),
+                phaseNameLabel: document.getElementById("phase-name-label"),
+                phaseName: document.getElementById("phase-name"),
+                phaseColorLabel: document.getElementById("phase-color-label"),
+                phaseSwatches: document.getElementById("phase-swatches"),
+                closePhaseDialog: document.getElementById("close-phase-dialog"),
+                cancelPhaseButton: document.getElementById("cancel-phase-button"),
+                savePhaseButton: document.getElementById("save-phase-button")
+            };
+
+            /* ── Runtime state ────────────────────────────────────── */
+            let currentUser  = null;
+            let state        = null;
+            let taskEditor   = { dayKey: null, taskId: null };
+            let phaseEditor  = { id: null };
+            let _syncTimer   = null;
+
+            /* ── Overlay helpers ──────────────────────────────────── */
+            function showSplash() { dom.splash.classList.remove("hidden"); }
+            function hideSplash() { dom.splash.classList.add("hidden"); }
+            function showAuth()   { dom.authScreen.classList.remove("hidden"); dom.appShell.style.display = "none"; }
+            function hideAuth()   { dom.authScreen.classList.add("hidden"); }
+            function showApp()    { hideSplash(); hideAuth(); dom.appShell.style.display = ""; }
+
+            function toggleAuthMode(mode) {
+                dom.loginForm.classList.toggle("active-form",  mode === "login");
+                dom.signupForm.classList.toggle("active-form", mode === "signup");
+                dom.loginError.textContent  = "";
+                dom.signupError.textContent = "";
+                dom.signupSuccess.textContent = "";
+            }
+
+            /* ── Auth handlers ────────────────────────────────────── */
+            async function handleLogin(e) {
+                e.preventDefault();
+                const email = dom.loginEmail.value.trim();
+                const pass  = dom.loginPass.value;
+                dom.loginError.textContent = "";
+                dom.loginBtn.disabled = true;
+                const { error } = await _sb.auth.signInWithPassword({ email, password: pass });
+                dom.loginBtn.disabled = false;
+                if (error) dom.loginError.textContent = error.message;
+            }
+
+            async function handleSignup(e) {
+                e.preventDefault();
+                const name  = dom.signupName.value.trim();
+                const email = dom.signupEmail.value.trim();
+                const pass  = dom.signupPass.value;
+                dom.signupError.textContent   = "";
+                dom.signupSuccess.textContent = "";
+                dom.signupBtn.disabled = true;
+                const { error } = await _sb.auth.signUp({
+                    email,
+                    password: pass,
+                    options: { data: { name } }
+                });
+                dom.signupBtn.disabled = false;
+                if (error) {
+                    dom.signupError.textContent = error.message;
+                } else {
+                    dom.signupSuccess.textContent = state?.lang === "ar"
+                        ? "تم إنشاء الحساب! سجّل دخولك الآن."
+                        : "Account created! Sign in now.";
+                    setTimeout(() => toggleAuthMode("login"), 2000);
+                }
+            }
+
+            async function handleSignOut() {
+                const t = labels[state?.lang || "ar"];
+                if (!confirm(t.signOutConfirm)) return;
+                await _sb.auth.signOut();
+            }
+
+            /* ── Cloud data sync ──────────────────────────────────── */
+            function getCacheKey() {
+                return `${CACHE_KEY_PREFIX}.${currentUser?.id || "anon"}`;
+            }
+
+            async function loadStateFromCloud() {
+                try {
+                    const { data, error } = await _sb
+                        .from("user_tasks")
+                        .select("state_json")
+                        .eq("user_id", currentUser.id)
+                        .single();
+                    if (error || !data?.state_json) return null;
+                    try {
+                        localStorage.setItem(getCacheKey(), JSON.stringify(data.state_json));
+                    } catch {}
+                    return buildState(data.state_json);
+                } catch { return null; }
+            }
+
+            function loadStateFromCache() {
+                try {
+                    const raw = localStorage.getItem(getCacheKey());
+                    const saved = JSON.parse(raw || "null");
+                    if (!saved || typeof saved !== "object") return buildDefaultState();
+                    return buildState(saved);
+                } catch { return buildDefaultState(); }
+            }
+
+            function buildDefaultState() {
+                return {
+                    lang: "ar",
+                    theme: window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light",
+                    selectedYear: todayYear,
+                    selectedWeek: currentPlannerWeek,
+                    activePhaseId: "study",
+                    phases: [
+                        { id: "study",    names: { ar: "الدراسة", en: "Study" },    color: phaseColors[0] },
+                        { id: "work",     names: { ar: "العمل",   en: "Work" },     color: phaseColors[1] },
+                        { id: "personal", names: { ar: "شخصي",    en: "Personal" }, color: phaseColors[2] }
+                    ],
+                    tasks: {},
+                    filter: "all",
+                    search: ""
+                };
+            }
+
+            function buildState(saved) {
+                const fallback = buildDefaultState();
+                const merged = {
+                    ...fallback,
+                    ...saved,
+                    phases: Array.isArray(saved.phases) && saved.phases.length ? saved.phases : fallback.phases,
+                    tasks:  saved.tasks && typeof saved.tasks === "object" ? saved.tasks : {}
+                };
+                if (!merged.phases.some(p => p.id === merged.activePhaseId)) {
+                    merged.activePhaseId = merged.phases[0].id;
+                }
+                merged.search = "";
+                return merged;
+            }
+
+            function getStateSnapshot() {
+                return {
+                    lang: state.lang,
+                    theme: state.theme,
+                    selectedYear: state.selectedYear,
+                    selectedWeek: state.selectedWeek,
+                    activePhaseId: state.activePhaseId,
+                    phases: state.phases,
+                    tasks: state.tasks,
+                    filter: state.filter
+                };
+            }
+
+            function saveState() {
+                const snapshot = getStateSnapshot();
+                try { localStorage.setItem(getCacheKey(), JSON.stringify(snapshot)); } catch {}
+                if (_syncTimer) clearTimeout(_syncTimer);
+                _syncTimer = setTimeout(() => syncToCloud(snapshot), 1500);
+            }
+
+            async function syncToCloud(snapshot) {
+                if (!currentUser) return;
+                try {
+                    await _sb.from("user_tasks").upsert(
+                        { user_id: currentUser.id, state_json: snapshot },
+                        { onConflict: "user_id" }
+                    );
+                } catch {}
+            }
+
+            /* ── Supabase auth listener (boot) ────────────────────── */
+            _sb.auth.onAuthStateChange(async (event, session) => {
+                if (session?.user) {
+                    currentUser = session.user;
+                    const cloudState = await loadStateFromCloud();
+                    state = cloudState || loadStateFromCache();
+                    bindEvents();
+                    showApp();
+                    render();
+                } else {
+                    currentUser = null;
+                    hideSplash();
+                    showAuth();
+                }
+            });
+
+            /* ── Event bindings ───────────────────────────────────── */
+            let _eventsBound = false;
+            function bindEvents() {
+                if (_eventsBound) return;
+                _eventsBound = true;
+
+                dom.themeToggle.addEventListener("click", () => {
+                    state.theme = state.theme === "dark" ? "light" : "dark";
+                    saveState();
+                    applyTheme();
+                });
+
+                dom.langToggle.addEventListener("click", () => {
+                    state.lang = state.lang === "ar" ? "en" : "ar";
+                    saveState();
+                    render();
+                });
+
+                dom.signoutButton.addEventListener("click", handleSignOut);
+
+                dom.yearSelect.addEventListener("change", () => {
+                    state.selectedYear = Number(dom.yearSelect.value);
+                    clampSelectedWeek();
+                    saveState();
+                    render();
+                });
+
+                dom.todayButton.addEventListener("click", goToToday);
+                dom.archiveTodayButton.addEventListener("click", goToToday);
+
+                dom.searchInput.addEventListener("input", () => {
+                    state.search = dom.searchInput.value;
+                    renderDays();
+                });
+
+                dom.filterSelect.addEventListener("change", () => {
+                    state.filter = dom.filterSelect.value;
+                    saveState();
+                    renderDays();
+                    renderStats();
+                });
+
+                dom.addPhaseButton.addEventListener("click", () => openPhaseDialog());
+                dom.closeTaskDialog.addEventListener("click", () => dom.taskDialog.close());
+                dom.cancelTaskButton.addEventListener("click", () => dom.taskDialog.close());
+                dom.closePhaseDialog.addEventListener("click", () => dom.phaseDialog.close());
+                dom.cancelPhaseButton.addEventListener("click", () => dom.phaseDialog.close());
+
+                dom.taskForm.addEventListener("submit", event => {
+                    event.preventDefault();
+                    saveTaskFromDialog();
+                });
+
+                dom.phaseForm.addEventListener("submit", event => {
+                    event.preventDefault();
+                    savePhaseFromDialog();
+                });
+            }
+
+            /* Auth form bindings (always active) */
+            dom.loginForm.addEventListener("submit", handleLogin);
+            dom.signupForm.addEventListener("submit", handleSignup);
+            dom.goSignup.addEventListener("click", () => toggleAuthMode("signup"));
+            dom.goLogin.addEventListener("click",  () => toggleAuthMode("login"));
+
+            /* ── Render ───────────────────────────────────────────── */
+            function render() {
+                applyTheme();
+                applyLanguage();
+                renderAccount();
+                populateYears();
+                populateFilter();
+                populatePriorities();
+                populateSwatches();
+                clampSelectedWeek();
+                renderTimeline();
+                renderPhases();
+                renderStats();
+                renderDays();
+            }
+
+            function applyTheme() {
+                dom.root.dataset.theme = state.theme;
+                dom.themeToggle.textContent = state.theme === "dark" ? "☀" : "☾";
+            }
+
+            function applyLanguage() {
+                const t = labels[state.lang];
+                dom.root.lang = state.lang;
+                dom.root.dir  = state.lang === "ar" ? "rtl" : "ltr";
+                document.title = t.appTitle;
+                dom.todayLine.textContent = `${t.todayPrefix}: ${formatDate(today, { weekday: "long", year: "numeric", month: "long", day: "numeric" })}`;
+                dom.appTitle.textContent    = t.appTitle;
+                dom.appSubtitle.textContent = t.subtitle;
+                dom.signoutButton.setAttribute("aria-label", state.lang === "ar" ? "تسجيل الخروج" : "Sign out");
+                dom.langToggle.textContent  = state.lang === "ar" ? "EN" : "عربي";
+                dom.yearLabel.textContent   = t.year;
+                dom.jumpLabel.textContent   = t.jump;
+                dom.todayButton.textContent = t.goToday;
+                dom.archiveTodayButton.textContent = t.goToday;
+                dom.searchLabel.textContent = t.search;
+                dom.searchInput.placeholder = t.searchPlaceholder;
+                dom.filterLabel.textContent = t.filter;
+                dom.metricTotalLabel.textContent    = t.total;
+                dom.metricDoneLabel.textContent     = t.done;
+                dom.metricLeftLabel.textContent     = t.left;
+                dom.metricProgressLabel.textContent = t.progress;
+                dom.phasesTitle.textContent = t.phases;
+                dom.archiveNoteText.textContent = t.archiveNote;
+                dom.taskTextLabel.textContent     = t.taskText;
+                dom.taskPriorityLabel.textContent = t.taskPriority;
+                dom.taskTimeLabel.textContent     = t.taskTime;
+                dom.cancelTaskButton.textContent  = t.cancel;
+                dom.saveTaskButton.textContent    = t.save;
+                dom.phaseNameLabel.textContent    = t.phaseName;
+                dom.phaseColorLabel.textContent   = t.phaseColor;
+                dom.cancelPhaseButton.textContent = t.cancel;
+                dom.savePhaseButton.textContent   = t.save;
+            }
+
+            function renderAccount() {
+                const name = currentUser?.user_metadata?.name
+                    || currentUser?.email?.split("@")[0]
+                    || labels[state.lang].localUser;
+                dom.accountName.textContent   = name;
+                dom.accountAvatar.textContent = name.trim().slice(0, 1).toUpperCase();
+                dom.accountButton.title = name;
+            }
+
+            function populateYears() {
+                const previousValue = String(state.selectedYear);
+                dom.yearSelect.innerHTML = "";
+                for (let year = todayYear - 25; year <= todayYear + 15; year += 1) {
+                    const option = document.createElement("option");
+                    const status = getYearStatus(year);
+                    option.value    = String(year);
+                    option.textContent = `${year} · ${yearStatusLabel(status)}`;
+                    option.dataset.status = status;
+                    option.selected = String(year) === previousValue;
+                    dom.yearSelect.appendChild(option);
+                }
+                dom.yearSelect.dataset.status = getYearStatus(state.selectedYear);
+            }
+
+            function populateFilter() {
+                const t = labels[state.lang];
+                const options = ["all", "active", "done", "high"];
+                dom.filterSelect.innerHTML = options.map(value =>
+                    `<option value="${value}">${t.filters[value]}</option>`
+                ).join("");
+                dom.filterSelect.value = state.filter || "all";
+            }
+
+            function populatePriorities() {
+                const t = labels[state.lang];
+                dom.taskPriority.innerHTML = ["low", "normal", "high"]
+                    .map(value => `<option value="${value}">${t.priorities[value]}</option>`)
+                    .join("");
+            }
+
+            function populateSwatches() {
+                dom.phaseSwatches.innerHTML = phaseColors.map((color, index) => `
+                    <label class="swatch" style="--swatch-color: ${color}">
+                        <input type="radio" name="phase-color" value="${color}" ${index === 0 ? "checked" : ""}>
+                        <span></span>
+                    </label>
+                `).join("");
+            }
+
+            function renderTimeline() {
+                const t      = labels[state.lang];
+                const status = getWeekStatus(state.selectedYear, state.selectedWeek);
+                const range  = getWeekRange(state.selectedYear, state.selectedWeek);
+                const weeks  = weeksInPlannerYear(state.selectedYear);
+
+                dom.weekTitle.textContent  = `${t.week} ${state.selectedWeek}`;
+                dom.weekRange.textContent  = `${formatDate(range.start, { month: "short", day: "numeric" })} - ${formatDate(range.end, { month: "short", day: "numeric", year: "numeric" })}`;
+                dom.weekStatus.textContent = statusLabel(status);
+                dom.weekStatus.className   = `status-pill ${status}`;
+                dom.archiveNote.classList.toggle("show", status === "past" || getYearStatus(state.selectedYear) === "past");
+
+                dom.weekStrip.innerHTML = "";
+                for (let week = 1; week <= weeks; week += 1) {
+                    const weekStatus = getWeekStatus(state.selectedYear, week);
+                    const weekRange  = getWeekRange(state.selectedYear, week);
+                    const button = document.createElement("button");
+                    button.type      = "button";
+                    button.className = `week-button ${weekStatus} ${week === state.selectedWeek ? "active" : ""}`;
+                    button.setAttribute("aria-pressed", week === state.selectedWeek ? "true" : "false");
+                    button.innerHTML = `
+                        <span class="week-number">${t.week} ${week}</span>
+                        <span class="week-mini-date">${formatDate(weekRange.start, { month: "short", day: "numeric" })}</span>
+                    `;
+                    button.addEventListener("click", () => {
+                        state.selectedWeek = week;
+                        saveState();
+                        renderTimeline();
+                        renderStats();
+                        renderDays();
+                    });
+                    dom.weekStrip.appendChild(button);
+                }
+
+                requestAnimationFrame(() => {
+                    const active = dom.weekStrip.querySelector(".week-button.active");
+                    if (active) active.scrollIntoView({ inline: "center", block: "nearest" });
+                });
+            }
+
+            function renderPhases() {
+                dom.phaseList.innerHTML = "";
+                state.phases.forEach(phase => {
+                    const row  = document.createElement("div");
+                    row.className = "phase-row";
+
+                    const item = document.createElement("button");
+                    item.type      = "button";
+                    item.className = `phase-item ${phase.id === state.activePhaseId ? "active" : ""}`;
+                    item.style.setProperty("--phase-color", phase.color || phaseColors[0]);
+                    item.innerHTML = `
+                        <span class="phase-color" aria-hidden="true"></span>
+                        <span class="phase-name">${escapeHtml(getPhaseName(phase))}</span>
+                        <span class="phase-count">${countTasksForPhase(phase.id)}</span>
+                    `;
+                    item.addEventListener("click", () => {
+                        state.activePhaseId = phase.id;
+                        saveState();
+                        renderPhases();
+                        renderStats();
+                        renderDays();
+                    });
+
+                    const editBtn = document.createElement("button");
+                    editBtn.type      = "button";
+                    editBtn.className = "mini-icon";
+                    editBtn.textContent = "✎";
+                    editBtn.setAttribute("aria-label", labels[state.lang].edit);
+                    editBtn.addEventListener("click", () => openPhaseDialog(phase.id));
+
+                    const delBtn = document.createElement("button");
+                    delBtn.type      = "button";
+                    delBtn.className = "mini-icon";
+                    delBtn.textContent = "×";
+                    delBtn.setAttribute("aria-label", labels[state.lang].delete);
+                    delBtn.addEventListener("click", () => deletePhase(phase.id));
+
+                    row.appendChild(item);
+                    row.appendChild(editBtn);
+                    row.appendChild(delBtn);
+                    dom.phaseList.appendChild(row);
+                });
+            }
+
+            function renderStats() {
+                const tasks    = getWeekTasks(state.activePhaseId);
+                const filtered = tasks.filter(task => taskMatches(task, ""));
+                const done     = filtered.filter(task => task.done).length;
+                const total    = filtered.length;
+                const left     = total - done;
+                const pct      = total ? Math.round((done / total) * 100) : 0;
+
+                dom.metricTotal.textContent    = total;
+                dom.metricDone.textContent     = done;
+                dom.metricLeft.textContent     = left;
+                dom.metricProgress.textContent = `${pct}%`;
+                dom.progressFill.style.width   = `${pct}%`;
+            }
+
+            function renderDays() {
+                const t     = labels[state.lang];
+                const range = getWeekRange(state.selectedYear, state.selectedWeek);
+                const query = normalizeText(state.search);
+                dom.daysContainer.innerHTML = "";
+
+                for (let dayIndex = 0; dayIndex < 7; dayIndex += 1) {
+                    const dayDate = addDays(range.start, dayIndex);
+                    const isPast  = dayDate < today && !sameDay(dayDate, today);
+                    const isToday = sameDay(dayDate, today);
+                    const dayKey  = getDayKey(dayIndex);
+                    const tasks   = getTasks(dayKey).filter(task => taskMatches(task, query));
+
+                    const card = document.createElement("div");
+                    card.className = `day-card ${isPast ? "past-day" : ""} ${isToday ? "today" : ""}`;
+
+                    const head = document.createElement("div");
+                    head.className = "day-head";
+                    head.innerHTML = `
+                        <span class="day-name">${t.days[dayIndex]}</span>
+                        <span class="day-date">${formatDate(dayDate, { month: "short", day: "numeric" })}</span>
+                    `;
+
+                    const list = document.createElement("ul");
+                    list.className = "task-list";
+
+                    if (tasks.length === 0) {
+                        const empty = document.createElement("li");
+                        empty.className   = "empty-state";
+                        empty.textContent = query ? t.emptyFiltered : t.empty;
+                        list.appendChild(empty);
+                    } else {
+                        tasks.forEach(task => {
+                            const item = document.createElement("li");
+                            item.className       = `task-item ${task.done ? "done" : ""}`;
+                            item.dataset.priority = task.priority || "normal";
+
+                            const check = document.createElement("input");
+                            check.type      = "checkbox";
+                            check.className = "task-check";
+                            check.checked   = task.done;
+                            check.setAttribute("aria-label", task.text);
+                            check.addEventListener("change", () => toggleTask(dayKey, task.id));
+
+                            const mainBtn = document.createElement("button");
+                            mainBtn.type      = "button";
+                            mainBtn.className = "task-main";
+                            mainBtn.addEventListener("click", () => openTaskDialog(dayKey, task.id));
+
+                            const textSpan = document.createElement("span");
+                            textSpan.className   = "task-text";
+                            textSpan.textContent = task.text;
+
+                            const meta = document.createElement("div");
+                            meta.className = "task-meta";
+                            if (task.time) {
+                                const chip = document.createElement("span");
+                                chip.className   = "meta-chip";
+                                chip.textContent = task.time;
+                                meta.appendChild(chip);
+                            }
+                            if (task.priority && task.priority !== "normal") {
+                                const chip = document.createElement("span");
+                                chip.className   = "meta-chip";
+                                chip.textContent = labels[state.lang].priorities[task.priority];
+                                meta.appendChild(chip);
+                            }
+
+                            mainBtn.appendChild(textSpan);
+                            mainBtn.appendChild(meta);
+
+                            const delBtn = document.createElement("button");
+                            delBtn.type      = "button";
+                            delBtn.className = "delete-task";
+                            delBtn.textContent = "×";
+                            delBtn.setAttribute("aria-label", t.delete);
+                            delBtn.addEventListener("click", () => deleteTask(dayKey, task.id));
+
+                            item.appendChild(check);
+                            item.appendChild(mainBtn);
+                            item.appendChild(delBtn);
+                            list.appendChild(item);
+                        });
+                    }
+
+                    const addBtn = document.createElement("button");
+                    addBtn.type      = "button";
+                    addBtn.className = "add-task";
+                    addBtn.textContent = t.addTask;
+                    addBtn.addEventListener("click", () => openTaskDialog(dayKey));
+
+                    card.appendChild(head);
+                    card.appendChild(list);
+                    card.appendChild(addBtn);
+                    dom.daysContainer.appendChild(card);
+                }
+            }
+
+            /* ── Task CRUD ────────────────────────────────────────── */
+            function openTaskDialog(dayKey, taskId = null) {
+                const t    = labels[state.lang];
+                taskEditor = { dayKey, taskId };
+                const task = taskId ? findTask(dayKey, taskId) : null;
+                dom.taskDialogTitle.textContent = task ? t.taskTitleEdit : t.taskTitleNew;
+                dom.taskText.value     = task ? task.text : "";
+                dom.taskPriority.value = task ? task.priority || "normal" : "normal";
+                dom.taskTime.value     = task ? task.time || "" : "";
+                dom.taskDialog.showModal();
+                setTimeout(() => dom.taskText.focus(), 0);
+            }
+
+            function saveTaskFromDialog() {
+                const text = dom.taskText.value.trim();
+                if (!text) return;
+                const list = ensureTaskList(taskEditor.dayKey);
+                if (taskEditor.taskId) {
+                    const task = findTask(taskEditor.dayKey, taskEditor.taskId);
+                    if (task) {
+                        task.text     = text;
+                        task.priority = dom.taskPriority.value;
+                        task.time     = dom.taskTime.value;
+                    }
+                } else {
+                    list.push({
+                        id:        createId("task"),
+                        text,
+                        done:      false,
+                        priority:  dom.taskPriority.value,
+                        time:      dom.taskTime.value,
+                        createdAt: new Date().toISOString()
+                    });
+                }
+                dom.taskDialog.close();
+                saveState();
+                renderStats();
+                renderPhases();
+                renderDays();
+            }
+
+            function toggleTask(dayKey, taskId) {
+                const task = findTask(dayKey, taskId);
+                if (!task) return;
+                task.done = !task.done;
+                saveState();
+                renderStats();
+                renderPhases();
+                renderDays();
+            }
+
+            function deleteTask(dayKey, taskId) {
+                if (!confirm(labels[state.lang].deleteTaskConfirm)) return;
+                const list = ensureTaskList(dayKey);
+                state.tasks[dayKey] = list.filter(task => task.id !== taskId);
+                saveState();
+                renderStats();
+                renderPhases();
+                renderDays();
+            }
+
+            /* ── Phase CRUD ───────────────────────────────────────── */
+            function openPhaseDialog(phaseId = null) {
+                const t     = labels[state.lang];
+                const phase = phaseId ? state.phases.find(item => item.id === phaseId) : null;
+                phaseEditor.id = phaseId;
+                dom.phaseDialogTitle.textContent = phase ? t.phaseTitleEdit : t.phaseTitleNew;
+                dom.phaseName.value = phase ? getPhaseName(phase) : "";
+                const color = phase ? phase.color || phaseColors[0] : phaseColors[0];
+                dom.phaseSwatches.querySelectorAll("input").forEach(input => {
+                    input.checked = input.value === color;
+                });
+                dom.phaseDialog.showModal();
+                setTimeout(() => dom.phaseName.focus(), 0);
+            }
+
+            function savePhaseFromDialog() {
+                const name = dom.phaseName.value.trim();
+                if (!name) return;
+                const colorInput = dom.phaseSwatches.querySelector("input:checked");
+                const color      = colorInput ? colorInput.value : phaseColors[0];
+                if (phaseEditor.id) {
+                    const phase = state.phases.find(item => item.id === phaseEditor.id);
+                    if (phase) { phase.name = name; delete phase.names; phase.color = color; }
+                } else {
+                    const id = createId("phase");
+                    state.phases.push({ id, name, color });
+                    state.activePhaseId = id;
+                }
+                dom.phaseDialog.close();
+                saveState();
+                renderPhases();
+                renderStats();
+                renderDays();
+            }
+
+            function deletePhase(phaseId) {
+                const t = labels[state.lang];
+                if (state.phases.length === 1) { alert(t.lastPhaseWarning); return; }
+                if (!confirm(t.deletePhaseConfirm)) return;
+                state.phases = state.phases.filter(phase => phase.id !== phaseId);
+                Object.keys(state.tasks).forEach(key => {
+                    if (key.includes(`-${phaseId}-`)) delete state.tasks[key];
+                });
+                if (state.activePhaseId === phaseId) state.activePhaseId = state.phases[0].id;
+                saveState();
+                renderPhases();
+                renderStats();
+                renderDays();
+            }
+
+            /* ── Navigation ───────────────────────────────────────── */
+            function goToToday() {
+                state.selectedYear = todayYear;
+                state.selectedWeek = currentPlannerWeek;
+                saveState();
+                render();
+            }
+
+            /* ── Task helpers ─────────────────────────────────────── */
+            function getWeekTasks(phaseId) {
+                const tasks = [];
+                for (let dayIndex = 0; dayIndex < 7; dayIndex += 1) {
+                    tasks.push(...getTasks(getDayKey(dayIndex, phaseId)));
+                }
+                return tasks;
+            }
+
+            function countTasksForPhase(phaseId) { return getWeekTasks(phaseId).length; }
+
+            function getTasks(dayKey) {
+                if (!state.tasks[dayKey]) return [];
+                state.tasks[dayKey] = state.tasks[dayKey].map(task => normalizeTask(task));
+                return state.tasks[dayKey];
+            }
+
+            function ensureTaskList(dayKey) {
+                if (!state.tasks[dayKey]) state.tasks[dayKey] = [];
+                state.tasks[dayKey] = state.tasks[dayKey].map(task => normalizeTask(task));
+                return state.tasks[dayKey];
+            }
+
+            function normalizeTask(task) {
+                if (typeof task === "string") {
+                    return { id: createId("task"), text: task, done: false, priority: "normal", time: "", createdAt: new Date().toISOString() };
+                }
+                return {
+                    id:        task.id || createId("task"),
+                    text:      task.text || "",
+                    done:      Boolean(task.done),
+                    priority:  task.priority || "normal",
+                    time:      task.time || "",
+                    createdAt: task.createdAt || new Date().toISOString()
+                };
+            }
+
+            function findTask(dayKey, taskId) {
+                return ensureTaskList(dayKey).find(task => task.id === taskId);
+            }
+
+            function taskMatches(task, query) {
+                if (state.filter === "active" && task.done) return false;
+                if (state.filter === "done"   && !task.done) return false;
+                if (state.filter === "high"   && task.priority !== "high") return false;
+                if (!query) return true;
+                return normalizeText(task.text).includes(query);
+            }
+
+            function getDayKey(dayIndex, phaseId = state.activePhaseId) {
+                return `${state.selectedYear}-W${String(state.selectedWeek).padStart(2, "0")}-${phaseId}-D${dayIndex}`;
+            }
+
+            function getPhaseName(phase) {
+                if (phase.names && phase.names[state.lang]) return phase.names[state.lang];
+                return phase.name || phase.id;
+            }
+
+            /* ── Date / week helpers ──────────────────────────────── */
+            function clampSelectedWeek() {
+                const weeks = weeksInPlannerYear(state.selectedYear);
+                state.selectedWeek = Math.min(Math.max(Number(state.selectedWeek) || 1, 1), weeks);
+            }
+
+            function getYearStatus(year) {
+                if (year < todayYear) return "past";
+                if (year > todayYear) return "future";
+                return "current";
+            }
+
+            function getWeekStatus(year, week) {
+                const yearStatus = getYearStatus(year);
+                if (yearStatus === "past")   return "past";
+                if (yearStatus === "future") return "future";
+                const range = getWeekRange(year, week);
+                if (range.end < today)   return "past";
+                if (range.start > today) return "future";
+                return "current";
+            }
+
+            function yearStatusLabel(status) {
+                const t = labels[state.lang];
+                return status === "past" ? t.pastYear : status === "future" ? t.futureYear : t.currentYear;
+            }
+
+            function statusLabel(status) {
+                const t = labels[state.lang];
+                return status === "past" ? t.past : status === "future" ? t.future : t.current;
+            }
+
+            function getPlannerWeekForDate(date) {
+                const start = plannerYearStart(date.getFullYear());
+                const diff  = Math.floor((startOfDay(date) - start) / DAY_MS);
+                return Math.min(Math.floor(diff / 7) + 1, weeksInPlannerYear(date.getFullYear()));
+            }
+
+            function weeksInPlannerYear(year) {
+                const start     = plannerYearStart(year);
+                const nextStart = plannerYearStart(year + 1);
+                return Math.round((nextStart - start) / DAY_MS / 7);
+            }
+
+            function plannerYearStart(year) {
+                const janOne          = new Date(year, 0, 1);
+                const offsetFromSaturday = (janOne.getDay() + 1) % 7;
+                return startOfDay(new Date(year, 0, 1 - offsetFromSaturday));
+            }
+
+            function getWeekRange(year, week) {
+                const start = addDays(plannerYearStart(year), (week - 1) * 7);
+                return { start, end: addDays(start, 6) };
+            }
+
+            function addDays(date, days) {
+                const next = new Date(date);
+                next.setDate(next.getDate() + days);
+                return startOfDay(next);
+            }
+
+            function startOfDay(date) {
+                const next = new Date(date);
+                next.setHours(0, 0, 0, 0);
+                return next;
+            }
+
+            function sameDay(first, second) {
+                return first.getFullYear() === second.getFullYear()
+                    && first.getMonth()    === second.getMonth()
+                    && first.getDate()     === second.getDate();
+            }
+
+            function formatDate(date, options) {
+                const locale = state?.lang === "ar" ? "ar-SA-u-ca-gregory" : "en-US";
+                return new Intl.DateTimeFormat(locale, options).format(date);
+            }
+
+            function createId(prefix) {
+                return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+            }
+
+            function normalizeText(value) {
+                return String(value || "").trim().toLowerCase();
+            }
+
+            function escapeHtml(value) {
+                return String(value)
+                    .replaceAll("&", "&amp;")
+                    .replaceAll("<", "&lt;")
+                    .replaceAll(">", "&gt;")
+                    .replaceAll('"', "&quot;")
+                    .replaceAll("'", "&#039;");
+            }
+
+        })();
+    </script>
+</body>
+</html>
+
+            "use strict";
+
+            const STORAGE_KEY = "weeklyPlanner.super.v2";
+            const LEGACY_STORAGE_KEY = "weeklyPlanner.super.v1";
+            const AUTH_KEY = "weeklyPlanner.localProfiles.v1";
+            const SESSION_KEY = "weeklyPlanner.activeProfile.v1";
+            const DAY_MS = 24 * 60 * 60 * 1000;
+            const today = startOfDay(new Date());
+            const todayYear = today.getFullYear();
+            const currentPlannerWeek = getPlannerWeekForDate(today);
+            const phaseColors = ["#0A1931", "#1A3D63", "#4A7FA7", "#B3CFE5", "#F6FAFD"];
+
+            const labels = {
+                ar: {
+                    appTitle: "مخطط الأسابيع الذكي",
+                    subtitle: "مساحة مرتبة للسنة، الأسابيع، المراحل، والمهام اليومية مع أرشفة تلقائية حسب التاريخ الفعلي.",
+                    account: "الحساب",
+                    accountTitle: "الحساب المحلي",
+                    accountName: "اسم المستخدم",
+                    accountPasscode: "رمز الدخول",
+                    accountHint: "هذا تسجيل دخول محلي مناسب للنشر على GitHub Pages. كل مستخدم له مهامه المحفوظة على هذا المتصفح، وللمزامنة الحقيقية بين الأجهزة تحتاج ربط Supabase أو Firebase لاحقًا.",
+                    profiles: "المستخدمون المحفوظون",
+                    saveAccount: "دخول / إنشاء",
+                    switchAccount: "اختيار",
+                    invalidPasscode: "رمز الدخول غير صحيح.",
+                    localUser: "مستخدم محلي",
+                    todayPrefix: "اليوم",
+                    year: "السنة",
+                    jump: "انتقال",
+                    goToday: "اليوم",
+                    search: "البحث",
+                    searchPlaceholder: "ابحث داخل هذا الأسبوع",
+                    filter: "العرض",
+                    filters: {
+                        all: "كل المهام",
+                        active: "غير المنجزة",
+                        done: "المنجزة",
+                        high: "الأولوية العالية"
+                    },
+                    total: "إجمالي المهام",
+                    done: "منجزة",
+                    left: "متبقية",
+                    progress: "التقدم",
+                    week: "الأسبوع",
+                    phases: "المراحل",
+                    current: "حالي",
+                    past: "منتهي",
+                    future: "قادم",
+                    pastYear: "سنة منتهية",
+                    currentYear: "السنة الحالية",
+                    futureYear: "سنة قادمة",
+                    archiveNote: "هذا أسبوع أو سنة منتهية. المحتوى ظاهر كامل للأرشفة والمراجعة.",
+                    days: ["السبت", "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"],
+                    addTask: "إضافة",
+                    empty: "لا توجد مهام هنا.",
+                    emptyFiltered: "لا توجد مهام مطابقة.",
+                    edit: "تعديل",
+                    delete: "حذف",
+                    taskTitleNew: "مهمة جديدة",
+                    taskTitleEdit: "تعديل المهمة",
+                    taskText: "المهمة",
+                    taskPriority: "الأولوية",
+                    taskTime: "الوقت",
+                    priorities: {
+                        low: "هادئة",
+                        normal: "متوسطة",
+                        high: "عالية"
+                    },
+                    cancel: "إلغاء",
+                    save: "حفظ",
+                    phaseTitleNew: "مرحلة جديدة",
+                    phaseTitleEdit: "تعديل المرحلة",
+                    phaseName: "اسم المرحلة",
+                    phaseColor: "لون المرحلة",
+                    deleteTaskConfirm: "حذف هذه المهمة؟",
+                    deletePhaseConfirm: "حذف المرحلة وكل مهامها؟",
+                    lastPhaseWarning: "لا يمكن حذف آخر مرحلة.",
+                    defaultPhases: {
+                        study: "الدراسة",
+                        work: "العمل",
+                        personal: "شخصي"
+                    }
+                },
+                en: {
+                    appTitle: "Smart Week Planner",
+                    subtitle: "A clean yearly workspace for weeks, phases, and daily tasks with automatic date-based archiving.",
+                    account: "Account",
+                    accountTitle: "Local account",
+                    accountName: "User name",
+                    accountPasscode: "Passcode",
+                    accountHint: "This is local sign-in for GitHub Pages. Each user keeps separate tasks in this browser. Real cross-device sync needs Supabase or Firebase later.",
+                    profiles: "Saved users",
+                    saveAccount: "Enter / Create",
+                    switchAccount: "Choose",
+                    invalidPasscode: "Incorrect passcode.",
+                    localUser: "Local user",
+                    todayPrefix: "Today",
+                    year: "Year",
+                    jump: "Jump",
+                    goToday: "Today",
+                    search: "Search",
+                    searchPlaceholder: "Search this week",
+                    filter: "View",
+                    filters: {
+                        all: "All tasks",
+                        active: "Open tasks",
+                        done: "Completed",
+                        high: "High priority"
+                    },
+                    total: "Total tasks",
+                    done: "Done",
+                    left: "Left",
+                    progress: "Progress",
+                    week: "Week",
+                    phases: "Phases",
+                    current: "Current",
+                    past: "Ended",
+                    future: "Upcoming",
+                    pastYear: "Ended year",
+                    currentYear: "Current year",
+                    futureYear: "Upcoming year",
+                    archiveNote: "This week or year has ended. Its content stays visible for review.",
+                    days: ["Saturday", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+                    addTask: "Add",
+                    empty: "No tasks here.",
+                    emptyFiltered: "No matching tasks.",
+                    edit: "Edit",
+                    delete: "Delete",
+                    taskTitleNew: "New task",
+                    taskTitleEdit: "Edit task",
+                    taskText: "Task",
+                    taskPriority: "Priority",
+                    taskTime: "Time",
+                    priorities: {
+                        low: "Low",
+                        normal: "Medium",
+                        high: "High"
+                    },
+                    cancel: "Cancel",
+                    save: "Save",
+                    phaseTitleNew: "New phase",
+                    phaseTitleEdit: "Edit phase",
+                    phaseName: "Phase name",
+                    phaseColor: "Phase color",
+                    deleteTaskConfirm: "Delete this task?",
+                    deletePhaseConfirm: "Delete this phase and all its tasks?",
+                    lastPhaseWarning: "You cannot delete the last phase.",
+                    defaultPhases: {
+                        study: "Study",
+                        work: "Work",
+                        personal: "Personal"
+                    }
+                }
+            };
+
+            const dom = {
+                root: document.documentElement,
+                todayLine: document.getElementById("today-line"),
+                appTitle: document.getElementById("app-title"),
+                appSubtitle: document.getElementById("app-subtitle"),
+                accountButton: document.getElementById("account-button"),
+                accountAvatar: document.getElementById("account-avatar"),
+                accountName: document.getElementById("account-name"),
+                themeToggle: document.getElementById("theme-toggle"),
+                langToggle: document.getElementById("lang-toggle"),
+                yearLabel: document.getElementById("year-label"),
+                yearSelect: document.getElementById("year-select"),
+                jumpLabel: document.getElementById("jump-label"),
+                todayButton: document.getElementById("today-button"),
+                archiveTodayButton: document.getElementById("archive-today-button"),
+                searchLabel: document.getElementById("search-label"),
+                searchInput: document.getElementById("search-input"),
+                filterLabel: document.getElementById("filter-label"),
+                filterSelect: document.getElementById("filter-select"),
+                metricTotalLabel: document.getElementById("metric-total-label"),
+                metricDoneLabel: document.getElementById("metric-done-label"),
+                metricLeftLabel: document.getElementById("metric-left-label"),
+                metricProgressLabel: document.getElementById("metric-progress-label"),
+                metricTotal: document.getElementById("metric-total"),
+                metricDone: document.getElementById("metric-done"),
+                metricLeft: document.getElementById("metric-left"),
+                metricProgress: document.getElementById("metric-progress"),
+                progressFill: document.getElementById("progress-fill"),
+                weekTitle: document.getElementById("week-title"),
+                weekRange: document.getElementById("week-range"),
+                weekStatus: document.getElementById("week-status"),
+                weekStrip: document.getElementById("week-strip"),
+                phasesTitle: document.getElementById("phases-title"),
+                phaseList: document.getElementById("phase-list"),
+                addPhaseButton: document.getElementById("add-phase-button"),
+                archiveNote: document.getElementById("archive-note"),
+                archiveNoteText: document.getElementById("archive-note-text"),
+                daysContainer: document.getElementById("days-container"),
+                accountDialog: document.getElementById("account-dialog"),
+                accountForm: document.getElementById("account-form"),
+                accountDialogTitle: document.getElementById("account-dialog-title"),
+                accountNote: document.getElementById("account-note"),
+                accountInputLabel: document.getElementById("account-input-label"),
+                accountInput: document.getElementById("account-input"),
+                accountPasscodeLabel: document.getElementById("account-passcode-label"),
+                accountPasscode: document.getElementById("account-passcode"),
+                profilesLabel: document.getElementById("profiles-label"),
+                profileList: document.getElementById("profile-list"),
+                closeAccountDialog: document.getElementById("close-account-dialog"),
+                cancelAccountButton: document.getElementById("cancel-account-button"),
+                saveAccountButton: document.getElementById("save-account-button"),
+                taskDialog: document.getElementById("task-dialog"),
+                taskForm: document.getElementById("task-form"),
+                taskDialogTitle: document.getElementById("task-dialog-title"),
+                taskTextLabel: document.getElementById("task-text-label"),
+                taskText: document.getElementById("task-text"),
+                taskPriorityLabel: document.getElementById("task-priority-label"),
+                taskPriority: document.getElementById("task-priority"),
+                taskTimeLabel: document.getElementById("task-time-label"),
+                taskTime: document.getElementById("task-time"),
+                closeTaskDialog: document.getElementById("close-task-dialog"),
+                cancelTaskButton: document.getElementById("cancel-task-button"),
+                saveTaskButton: document.getElementById("save-task-button"),
+                phaseDialog: document.getElementById("phase-dialog"),
+                phaseForm: document.getElementById("phase-form"),
+                phaseDialogTitle: document.getElementById("phase-dialog-title"),
+                phaseNameLabel: document.getElementById("phase-name-label"),
+                phaseName: document.getElementById("phase-name"),
+                phaseColorLabel: document.getElementById("phase-color-label"),
+                phaseSwatches: document.getElementById("phase-swatches"),
+                closePhaseDialog: document.getElementById("close-phase-dialog"),
+                cancelPhaseButton: document.getElementById("cancel-phase-button"),
+                savePhaseButton: document.getElementById("save-phase-button")
+            };
+
+            let currentUser = loadCurrentUser();
+            let state = loadState();
+            let taskEditor = { dayKey: null, taskId: null };
+            let phaseEditor = { id: null };
+
+            bindEvents();
+            render();
+
+            function bindEvents() {
+                dom.themeToggle.addEventListener("click", () => {
+                    state.theme = state.theme === "dark" ? "light" : "dark";
+                    saveState();
+                    applyTheme();
+                });
+
+                dom.langToggle.addEventListener("click", () => {
+                    state.lang = state.lang === "ar" ? "en" : "ar";
+                    saveState();
+                    render();
+                });
+
+                dom.accountButton.addEventListener("click", openAccountDialog);
+                dom.closeAccountDialog.addEventListener("click", () => dom.accountDialog.close());
+                dom.cancelAccountButton.addEventListener("click", () => dom.accountDialog.close());
+                dom.accountForm.addEventListener("submit", event => {
+                    event.preventDefault();
+                    void saveAccountFromDialog();
+                });
+
+                dom.yearSelect.addEventListener("change", () => {
+                    state.selectedYear = Number(dom.yearSelect.value);
+                    clampSelectedWeek();
+                    saveState();
+                    render();
+                });
+
+                dom.todayButton.addEventListener("click", goToToday);
+                dom.archiveTodayButton.addEventListener("click", goToToday);
+
+                dom.searchInput.addEventListener("input", () => {
+                    state.search = dom.searchInput.value;
+                    renderDays();
+                });
+
+                dom.filterSelect.addEventListener("change", () => {
+                    state.filter = dom.filterSelect.value;
+                    saveState();
+                    renderDays();
+                    renderStats();
+                });
+
+                dom.addPhaseButton.addEventListener("click", () => openPhaseDialog());
+                dom.closeTaskDialog.addEventListener("click", () => dom.taskDialog.close());
+                dom.cancelTaskButton.addEventListener("click", () => dom.taskDialog.close());
+                dom.closePhaseDialog.addEventListener("click", () => dom.phaseDialog.close());
+                dom.cancelPhaseButton.addEventListener("click", () => dom.phaseDialog.close());
+
+                dom.taskForm.addEventListener("submit", event => {
+                    event.preventDefault();
+                    saveTaskFromDialog();
+                });
+
+                dom.phaseForm.addEventListener("submit", event => {
+                    event.preventDefault();
+                    savePhaseFromDialog();
+                });
+            }
+
+            function defaultProfiles() {
+                return {
+                    activeUserId: "local",
+                    users: [{ id: "local", name: labels.ar.localUser }]
+                };
+            }
+
+            function readProfiles() {
+                try {
+                    const saved = JSON.parse(localStorage.getItem(AUTH_KEY) || "null");
+                    if (saved && Array.isArray(saved.users) && saved.users.length) return normalizeProfiles(saved);
+                } catch {
+                    return defaultProfiles();
+                }
+                return defaultProfiles();
+            }
+
+            function normalizeProfiles(profiles) {
+                const users = profiles.users
+                    .filter(user => user && (user.name || user.id))
+                    .map(user => ({
+                        id: user.id || createId("user"),
+                        name: user.name || labels.ar.localUser,
+                        salt: user.salt || "",
+                        passwordHash: user.passwordHash || "",
+                        createdAt: user.createdAt || new Date().toISOString()
+                    }));
+
+                if (!users.length) return defaultProfiles();
+
+                const activeUserId = users.some(user => user.id === profiles.activeUserId)
+                    ? profiles.activeUserId
+                    : users[0].id;
+
+                return { activeUserId, users };
+            }
+
+            function writeProfiles(profiles) {
+                try {
+                    localStorage.setItem(AUTH_KEY, JSON.stringify(profiles));
+                    localStorage.setItem(SESSION_KEY, profiles.activeUserId);
+                } catch {
+                    return;
+                }
+            }
+
+            function loadCurrentUser() {
+                const profiles = readProfiles();
+                let sessionId = profiles.activeUserId;
+                try {
+                    sessionId = localStorage.getItem(SESSION_KEY) || profiles.activeUserId;
+                } catch {
+                    sessionId = profiles.activeUserId;
+                }
+                const user = profiles.users.find(item => item.id === sessionId) || profiles.users[0];
+                profiles.activeUserId = user.id;
+                writeProfiles(profiles);
+                return user;
+            }
+
+            function getUserStorageKey() {
+                return `${STORAGE_KEY}.${currentUser.id}`;
+            }
+
+            function openAccountDialog() {
+                const t = labels[state.lang];
+                dom.accountDialogTitle.textContent = t.accountTitle;
+                dom.accountNote.textContent = t.accountHint;
+                dom.accountInputLabel.textContent = t.accountName;
+                dom.accountPasscodeLabel.textContent = t.accountPasscode;
+                dom.profilesLabel.textContent = t.profiles;
+                dom.cancelAccountButton.textContent = t.cancel;
+                dom.saveAccountButton.textContent = t.saveAccount;
+                dom.accountInput.value = currentUser.name || "";
+                dom.accountPasscode.value = "";
+                renderProfileList();
+                dom.accountDialog.showModal();
+                setTimeout(() => dom.accountPasscode.focus(), 0);
+            }
+
+            async function saveAccountFromDialog() {
+                const t = labels[state.lang];
+                const name = dom.accountInput.value.trim();
+                const passcode = dom.accountPasscode.value;
+                if (!name || !passcode) return;
+
+                const profiles = readProfiles();
+                const existing = profiles.users.find(user => normalizeText(user.name) === normalizeText(name));
+                const user = existing || { id: createId("user"), name, createdAt: new Date().toISOString() };
+                const salt = user.salt || createId("salt");
+                const passwordHash = await hashPasscode(passcode, salt, user.passwordHash);
+
+                if (existing && existing.passwordHash && existing.passwordHash !== passwordHash) {
+                    alert(t.invalidPasscode);
+                    dom.accountPasscode.select();
+                    return;
+                }
+
+                user.name = name;
+                user.salt = salt;
+                user.passwordHash = passwordHash;
+                currentUser = user;
+
+                if (!existing) profiles.users.push(currentUser);
+                profiles.activeUserId = currentUser.id;
+                writeProfiles(profiles);
+
+                state = loadState();
+                dom.accountPasscode.value = "";
+                dom.accountDialog.close();
+                render();
+            }
+
+            function switchAccount(userId) {
+                const profiles = readProfiles();
+                const user = profiles.users.find(item => item.id === userId);
+                if (!user) return;
+
+                dom.accountInput.value = user.name || "";
+                dom.accountPasscode.value = "";
+                dom.accountPasscode.focus();
+            }
+
+            function renderAccount() {
+                const name = currentUser.id === "local" ? labels[state.lang].localUser : (currentUser.name || labels[state.lang].localUser);
+                dom.accountName.textContent = name;
+                dom.accountAvatar.textContent = name.trim().slice(0, 1).toUpperCase();
+                dom.accountButton.title = labels[state.lang].accountTitle;
+            }
+
+            function renderProfileList() {
+                const profiles = readProfiles();
+                const t = labels[state.lang];
+                dom.profileList.innerHTML = profiles.users.map(user => `
+                    <div class="profile-row">
+                        <strong>${escapeHtml(user.name)}</strong>
+                        <button class="text-button" type="button" data-switch-profile="${user.id}">${t.switchAccount}</button>
+                    </div>
+                `).join("");
+
+                dom.profileList.querySelectorAll("[data-switch-profile]").forEach(button => {
+                    button.addEventListener("click", () => switchAccount(button.dataset.switchProfile));
+                });
+            }
+
+            async function hashPasscode(passcode, salt, existingHash = "") {
+                const value = `${salt}:${passcode}`;
+                if (existingHash.startsWith("fallback-")) return fallbackHash(value);
+                if (window.crypto && window.crypto.subtle && window.TextEncoder) {
+                    const encoded = new TextEncoder().encode(value);
+                    const digest = await window.crypto.subtle.digest("SHA-256", encoded);
+                    const hex = [...new Uint8Array(digest)]
+                        .map(byte => byte.toString(16).padStart(2, "0"))
+                        .join("");
+                    return existingHash && !existingHash.startsWith("sha256-") ? hex : `sha256-${hex}`;
+                }
+                return fallbackHash(value);
+            }
+
+            function fallbackHash(value) {
+                let hash = 2166136261;
+                for (let index = 0; index < value.length; index += 1) {
+                    hash ^= value.charCodeAt(index);
+                    hash = Math.imul(hash, 16777619);
+                }
+                return `fallback-${(hash >>> 0).toString(16)}`;
+            }
+
+            function loadState() {
+                const fallback = {
+                    lang: "ar",
+                    theme: window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light",
+                    selectedYear: todayYear,
+                    selectedWeek: currentPlannerWeek,
+                    activePhaseId: "study",
+                    phases: [
+                        { id: "study", names: labels.ar.defaultPhases.study ? { ar: "الدراسة", en: "Study" } : null, color: phaseColors[0] },
+                        { id: "work", names: { ar: "العمل", en: "Work" }, color: phaseColors[1] },
+                        { id: "personal", names: { ar: "شخصي", en: "Personal" }, color: phaseColors[2] }
+                    ],
+                    tasks: {},
+                    filter: "all",
+                    search: ""
+                };
+
+                try {
+                    const savedRaw = localStorage.getItem(getUserStorageKey())
+                        || (currentUser.id === "local" ? localStorage.getItem(LEGACY_STORAGE_KEY) : null);
+                    const saved = JSON.parse(savedRaw || "null");
+                    if (!saved || typeof saved !== "object") return fallback;
+
+                    const merged = {
+                        ...fallback,
+                        ...saved,
+                        phases: Array.isArray(saved.phases) && saved.phases.length ? saved.phases : fallback.phases,
+                        tasks: saved.tasks && typeof saved.tasks === "object" ? saved.tasks : {}
+                    };
+
+                    if (!merged.phases.some(phase => phase.id === merged.activePhaseId)) {
+                        merged.activePhaseId = merged.phases[0].id;
+                    }
+
+                    merged.search = "";
+                    return merged;
+                } catch {
+                    return fallback;
+                }
+            }
+
+            function saveState() {
+                const stateToSave = {
+                    lang: state.lang,
+                    theme: state.theme,
+                    selectedYear: state.selectedYear,
+                    selectedWeek: state.selectedWeek,
+                    activePhaseId: state.activePhaseId,
+                    phases: state.phases,
+                    tasks: state.tasks,
+                    filter: state.filter
+                };
+                try {
+                    localStorage.setItem(getUserStorageKey(), JSON.stringify(stateToSave));
+                } catch {
+                    // The planner still works during the session if storage is unavailable.
+                }
+            }
+
+            function render() {
+                applyTheme();
+                applyLanguage();
+                renderAccount();
+                populateYears();
+                populateFilter();
+                populatePriorities();
+                populateSwatches();
+                clampSelectedWeek();
+                renderTimeline();
+                renderPhases();
+                renderStats();
+                renderDays();
+            }
+
+            function applyTheme() {
+                dom.root.dataset.theme = state.theme;
+                dom.themeToggle.textContent = state.theme === "dark" ? "☀" : "☾";
+            }
+
+            function applyLanguage() {
+                const t = labels[state.lang];
+                dom.root.lang = state.lang;
+                dom.root.dir = state.lang === "ar" ? "rtl" : "ltr";
+                document.title = t.appTitle;
+                dom.todayLine.textContent = `${t.todayPrefix}: ${formatDate(today, { weekday: "long", year: "numeric", month: "long", day: "numeric" })}`;
+                dom.appTitle.textContent = t.appTitle;
+                dom.appSubtitle.textContent = t.subtitle;
+                dom.accountButton.setAttribute("aria-label", t.account);
+                dom.langToggle.textContent = state.lang === "ar" ? "EN" : "عربي";
+                dom.yearLabel.textContent = t.year;
+                dom.jumpLabel.textContent = t.jump;
+                dom.todayButton.textContent = t.goToday;
+                dom.archiveTodayButton.textContent = t.goToday;
+                dom.searchLabel.textContent = t.search;
+                dom.searchInput.placeholder = t.searchPlaceholder;
+                dom.filterLabel.textContent = t.filter;
+                dom.metricTotalLabel.textContent = t.total;
+                dom.metricDoneLabel.textContent = t.done;
+                dom.metricLeftLabel.textContent = t.left;
+                dom.metricProgressLabel.textContent = t.progress;
+                dom.phasesTitle.textContent = t.phases;
+                dom.archiveNoteText.textContent = t.archiveNote;
+                dom.taskTextLabel.textContent = t.taskText;
+                dom.taskPriorityLabel.textContent = t.taskPriority;
+                dom.taskTimeLabel.textContent = t.taskTime;
+                dom.cancelTaskButton.textContent = t.cancel;
+                dom.saveTaskButton.textContent = t.save;
+                dom.phaseNameLabel.textContent = t.phaseName;
+                dom.phaseColorLabel.textContent = t.phaseColor;
+                dom.cancelPhaseButton.textContent = t.cancel;
+                dom.savePhaseButton.textContent = t.save;
+            }
+
+            function populateYears() {
+                const previousValue = String(state.selectedYear);
+                dom.yearSelect.innerHTML = "";
+
+                for (let year = todayYear - 25; year <= todayYear + 15; year += 1) {
+                    const option = document.createElement("option");
+                    const status = getYearStatus(year);
+                    option.value = String(year);
+                    option.textContent = `${year} · ${yearStatusLabel(status)}`;
+                    option.dataset.status = status;
+                    option.selected = String(year) === previousValue;
+                    dom.yearSelect.appendChild(option);
+                }
+
+                dom.yearSelect.dataset.status = getYearStatus(state.selectedYear);
+            }
+
+            function populateFilter() {
+                const t = labels[state.lang];
+                const options = ["all", "active", "done", "high"];
+                dom.filterSelect.innerHTML = options.map(value => `<option value="${value}">${t.filters[value]}</option>`).join("");
+                dom.filterSelect.value = state.filter || "all";
+            }
+
+            function populatePriorities() {
+                const t = labels[state.lang];
+                dom.taskPriority.innerHTML = ["low", "normal", "high"]
+                    .map(value => `<option value="${value}">${t.priorities[value]}</option>`)
+                    .join("");
+            }
+
+            function populateSwatches() {
+                dom.phaseSwatches.innerHTML = phaseColors.map((color, index) => `
+                    <label class="swatch" style="--swatch-color: ${color}">
+                        <input type="radio" name="phase-color" value="${color}" ${index === 0 ? "checked" : ""}>
+                        <span></span>
+                    </label>
+                `).join("");
+            }
+
+            function renderTimeline() {
+                const t = labels[state.lang];
+                const status = getWeekStatus(state.selectedYear, state.selectedWeek);
+                const range = getWeekRange(state.selectedYear, state.selectedWeek);
+                const weeks = weeksInPlannerYear(state.selectedYear);
+
+                dom.weekTitle.textContent = `${t.week} ${state.selectedWeek}`;
+                dom.weekRange.textContent = `${formatDate(range.start, { month: "short", day: "numeric" })} - ${formatDate(range.end, { month: "short", day: "numeric", year: "numeric" })}`;
+                dom.weekStatus.textContent = statusLabel(status);
+                dom.weekStatus.className = `status-pill ${status}`;
+                dom.archiveNote.classList.toggle("show", status === "past" || getYearStatus(state.selectedYear) === "past");
+
+                dom.weekStrip.innerHTML = "";
+                for (let week = 1; week <= weeks; week += 1) {
+                    const weekStatus = getWeekStatus(state.selectedYear, week);
+                    const weekRange = getWeekRange(state.selectedYear, week);
+                    const button = document.createElement("button");
+                    button.type = "button";
+                    button.className = `week-button ${weekStatus} ${week === state.selectedWeek ? "active" : ""}`;
+                    button.setAttribute("aria-pressed", week === state.selectedWeek ? "true" : "false");
+                    button.innerHTML = `
+                        <span class="week-number">${t.week} ${week}</span>
+                        <span class="week-mini-date">${formatDate(weekRange.start, { month: "short", day: "numeric" })}</span>
+                    `;
+                    button.addEventListener("click", () => {
+                        state.selectedWeek = week;
+                        saveState();
+                        renderTimeline();
+                        renderStats();
+                        renderDays();
+                    });
+                    dom.weekStrip.appendChild(button);
+                }
+
+                requestAnimationFrame(() => {
+                    const active = dom.weekStrip.querySelector(".week-button.active");
+                    if (active) active.scrollIntoView({ inline: "center", block: "nearest" });
+                });
+            }
+
+            function renderPhases() {
+                dom.phaseList.innerHTML = "";
+                state.phases.forEach(phase => {
+                    const row = document.createElement("div");
+                    row.className = "phase-row";
+
+                    const item = document.createElement("button");
+                    item.type = "button";
+                    item.className = `phase-item ${phase.id === state.activePhaseId ? "active" : ""}`;
+                    item.style.setProperty("--phase-color", phase.color || phaseColors[0]);
+                    item.innerHTML = `
+                        <span class="phase-color" aria-hidden="true"></span>
+                        <span class="phase-name">${escapeHtml(getPhaseName(phase))}</span>
+                        <span class="phase-count">${countTasksForPhase(phase.id)}</span>
+                    `;
+                    item.addEventListener("click", () => {
+                        state.activePhaseId = phase.id;
+                        saveState();
+                        renderPhases();
+                        renderStats();
+                        renderDays();
+                    });
+
+                    const editButton = document.createElement("button");
+                    editButton.type = "button";
+                    editButton.className = "mini-icon";
+                    editButton.title = labels[state.lang].edit;
+                    editButton.setAttribute("aria-label", labels[state.lang].edit);
+                    editButton.textContent = "✎";
+                    editButton.addEventListener("click", () => openPhaseDialog(phase.id));
+
+                    const deleteButton = document.createElement("button");
+                    deleteButton.type = "button";
+                    deleteButton.className = "mini-icon";
+                    deleteButton.title = labels[state.lang].delete;
+                    deleteButton.setAttribute("aria-label", labels[state.lang].delete);
+                    deleteButton.textContent = "×";
+                    deleteButton.addEventListener("click", () => deletePhase(phase.id));
+
+                    row.append(item, editButton, deleteButton);
+                    dom.phaseList.appendChild(row);
+                });
+            }
+
+            function renderStats() {
+                const tasks = getWeekTasks(state.activePhaseId);
+                const total = tasks.length;
+                const done = tasks.filter(task => task.done).length;
+                const left = total - done;
+                const progress = total ? Math.round((done / total) * 100) : 0;
+
+                dom.metricTotal.textContent = total;
+                dom.metricDone.textContent = done;
+                dom.metricLeft.textContent = left;
+                dom.metricProgress.textContent = `${progress}%`;
+                dom.progressFill.style.width = `${progress}%`;
+            }
+
+            function renderDays() {
+                const t = labels[state.lang];
+                const range = getWeekRange(state.selectedYear, state.selectedWeek);
+                const query = normalizeText(state.search || "");
+                dom.searchInput.value = state.search || "";
+                dom.daysContainer.innerHTML = "";
+
+                t.days.forEach((dayName, dayIndex) => {
+                    const dayDate = addDays(range.start, dayIndex);
+                    const dayKey = getDayKey(dayIndex);
+                    const allTasks = getTasks(dayKey);
+                    const visibleTasks = allTasks.filter(task => taskMatches(task, query));
+                    const card = document.createElement("article");
+                    card.className = `day-card ${dayDate < today ? "past-day" : ""} ${sameDay(dayDate, today) ? "today" : ""}`;
+
+                    const listHtml = visibleTasks.length
+                        ? visibleTasks.map(task => renderTask(task, dayKey)).join("")
+                        : `<li class="empty-state">${query || state.filter !== "all" ? t.emptyFiltered : t.empty}</li>`;
+
+                    card.innerHTML = `
+                        <div class="day-head">
+                            <div class="day-name">${dayName}</div>
+                            <div class="day-date">${formatDate(dayDate, { month: "short", day: "numeric" })}</div>
+                        </div>
+                        <ul class="task-list">${listHtml}</ul>
+                        <button class="add-task" type="button" data-add-task="${dayKey}">+ ${t.addTask}</button>
+                    `;
+
+                    dom.daysContainer.appendChild(card);
+                });
+
+                dom.daysContainer.querySelectorAll("[data-add-task]").forEach(button => {
+                    button.addEventListener("click", () => openTaskDialog(button.dataset.addTask));
+                });
+                dom.daysContainer.querySelectorAll("[data-toggle-task]").forEach(input => {
+                    input.addEventListener("change", () => toggleTask(input.dataset.dayKey, input.dataset.toggleTask));
+                });
+                dom.daysContainer.querySelectorAll("[data-edit-task]").forEach(button => {
+                    button.addEventListener("click", () => openTaskDialog(button.dataset.dayKey, button.dataset.editTask));
+                });
+                dom.daysContainer.querySelectorAll("[data-delete-task]").forEach(button => {
+                    button.addEventListener("click", () => deleteTask(button.dataset.dayKey, button.dataset.deleteTask));
+                });
+            }
+
+            function renderTask(task, dayKey) {
+                const t = labels[state.lang];
+                const priority = task.priority || "normal";
+                const time = task.time ? `<span class="meta-chip">${escapeHtml(task.time)}</span>` : "";
+                const priorityLabel = `<span class="meta-chip">${t.priorities[priority] || t.priorities.normal}</span>`;
+
+                return `
+                    <li class="task-item ${task.done ? "done" : ""}" data-priority="${priority}">
+                        <input class="task-check" type="checkbox" ${task.done ? "checked" : ""} data-day-key="${dayKey}" data-toggle-task="${task.id}" aria-label="${t.done}">
+                        <button class="task-main" type="button" data-day-key="${dayKey}" data-edit-task="${task.id}" title="${t.edit}">
+                            <span class="task-text">${escapeHtml(task.text)}</span>
+                            <span class="task-meta">${priorityLabel}${time}</span>
+                        </button>
+                        <button class="delete-task" type="button" data-day-key="${dayKey}" data-delete-task="${task.id}" title="${t.delete}" aria-label="${t.delete}">×</button>
+                    </li>
+                `;
+            }
+
+            function openTaskDialog(dayKey, taskId = null) {
+                const t = labels[state.lang];
+                taskEditor = { dayKey, taskId };
+                const task = taskId ? findTask(dayKey, taskId) : null;
+
+                dom.taskDialogTitle.textContent = task ? t.taskTitleEdit : t.taskTitleNew;
+                dom.taskText.value = task ? task.text : "";
+                dom.taskPriority.value = task ? task.priority || "normal" : "normal";
+                dom.taskTime.value = task ? task.time || "" : "";
+                dom.taskDialog.showModal();
+                setTimeout(() => dom.taskText.focus(), 0);
+            }
+
+            function saveTaskFromDialog() {
+                const text = dom.taskText.value.trim();
+                if (!text) return;
+
+                const list = ensureTaskList(taskEditor.dayKey);
+                if (taskEditor.taskId) {
+                    const task = findTask(taskEditor.dayKey, taskEditor.taskId);
+                    if (task) {
+                        task.text = text;
+                        task.priority = dom.taskPriority.value;
+                        task.time = dom.taskTime.value;
+                    }
+                } else {
+                    list.push({
+                        id: createId("task"),
+                        text,
+                        done: false,
+                        priority: dom.taskPriority.value,
+                        time: dom.taskTime.value,
+                        createdAt: new Date().toISOString()
+                    });
+                }
+
+                dom.taskDialog.close();
+                saveState();
+                renderStats();
+                renderPhases();
+                renderDays();
+            }
+
+            function toggleTask(dayKey, taskId) {
+                const task = findTask(dayKey, taskId);
+                if (!task) return;
+                task.done = !task.done;
+                saveState();
+                renderStats();
+                renderPhases();
+                renderDays();
+            }
+
+            function deleteTask(dayKey, taskId) {
+                if (!confirm(labels[state.lang].deleteTaskConfirm)) return;
+                const list = ensureTaskList(dayKey);
+                state.tasks[dayKey] = list.filter(task => task.id !== taskId);
+                saveState();
+                renderStats();
+                renderPhases();
+                renderDays();
+            }
+
+            function openPhaseDialog(phaseId = null) {
+                const t = labels[state.lang];
+                const phase = phaseId ? state.phases.find(item => item.id === phaseId) : null;
+                phaseEditor.id = phaseId;
+
+                dom.phaseDialogTitle.textContent = phase ? t.phaseTitleEdit : t.phaseTitleNew;
+                dom.phaseName.value = phase ? getPhaseName(phase) : "";
+                const color = phase ? phase.color || phaseColors[0] : phaseColors[0];
+                dom.phaseSwatches.querySelectorAll("input").forEach(input => {
+                    input.checked = input.value === color;
+                });
+                dom.phaseDialog.showModal();
+                setTimeout(() => dom.phaseName.focus(), 0);
+            }
+
+            function savePhaseFromDialog() {
+                const name = dom.phaseName.value.trim();
+                if (!name) return;
+
+                const colorInput = dom.phaseSwatches.querySelector("input:checked");
+                const color = colorInput ? colorInput.value : phaseColors[0];
+
+                if (phaseEditor.id) {
+                    const phase = state.phases.find(item => item.id === phaseEditor.id);
+                    if (phase) {
+                        phase.name = name;
+                        delete phase.names;
+                        phase.color = color;
+                    }
+                } else {
+                    const id = createId("phase");
+                    state.phases.push({ id, name, color });
+                    state.activePhaseId = id;
+                }
+
+                dom.phaseDialog.close();
+                saveState();
+                renderPhases();
+                renderStats();
+                renderDays();
+            }
+
+            function deletePhase(phaseId) {
+                const t = labels[state.lang];
+                if (state.phases.length === 1) {
+                    alert(t.lastPhaseWarning);
+                    return;
+                }
+                if (!confirm(t.deletePhaseConfirm)) return;
+
+                state.phases = state.phases.filter(phase => phase.id !== phaseId);
+                Object.keys(state.tasks).forEach(key => {
+                    if (key.includes(`-${phaseId}-`)) delete state.tasks[key];
+                });
+                if (state.activePhaseId === phaseId) {
+                    state.activePhaseId = state.phases[0].id;
+                }
+                saveState();
+                renderPhases();
+                renderStats();
+                renderDays();
+            }
+
+            function goToToday() {
+                state.selectedYear = todayYear;
+                state.selectedWeek = currentPlannerWeek;
+                saveState();
+                render();
+            }
+
+            function getWeekTasks(phaseId) {
+                const tasks = [];
+                for (let dayIndex = 0; dayIndex < 7; dayIndex += 1) {
+                    tasks.push(...getTasks(getDayKey(dayIndex, phaseId)));
+                }
+                return tasks;
+            }
+
+            function countTasksForPhase(phaseId) {
+                return getWeekTasks(phaseId).length;
+            }
+
+            function getTasks(dayKey) {
+                if (!state.tasks[dayKey]) return [];
+                state.tasks[dayKey] = state.tasks[dayKey].map(task => normalizeTask(task));
+                return state.tasks[dayKey];
+            }
+
+            function ensureTaskList(dayKey) {
+                if (!state.tasks[dayKey]) state.tasks[dayKey] = [];
+                state.tasks[dayKey] = state.tasks[dayKey].map(task => normalizeTask(task));
+                return state.tasks[dayKey];
+            }
+
+            function normalizeTask(task) {
+                if (typeof task === "string") {
+                    return {
+                        id: createId("task"),
+                        text: task,
+                        done: false,
+                        priority: "normal",
+                        time: "",
+                        createdAt: new Date().toISOString()
+                    };
+                }
+
+                return {
+                    id: task.id || createId("task"),
+                    text: task.text || "",
+                    done: Boolean(task.done),
+                    priority: task.priority || "normal",
+                    time: task.time || "",
+                    createdAt: task.createdAt || new Date().toISOString()
+                };
+            }
+
+            function findTask(dayKey, taskId) {
+                return ensureTaskList(dayKey).find(task => task.id === taskId);
+            }
+
+            function taskMatches(task, query) {
+                if (state.filter === "active" && task.done) return false;
+                if (state.filter === "done" && !task.done) return false;
+                if (state.filter === "high" && task.priority !== "high") return false;
+                if (!query) return true;
+                return normalizeText(task.text).includes(query);
+            }
+
+            function getDayKey(dayIndex, phaseId = state.activePhaseId) {
+                return `${state.selectedYear}-W${String(state.selectedWeek).padStart(2, "0")}-${phaseId}-D${dayIndex}`;
+            }
+
+            function getPhaseName(phase) {
+                if (phase.names && phase.names[state.lang]) return phase.names[state.lang];
+                return phase.name || phase.id;
+            }
+
+            function clampSelectedWeek() {
+                const weeks = weeksInPlannerYear(state.selectedYear);
+                state.selectedWeek = Math.min(Math.max(Number(state.selectedWeek) || 1, 1), weeks);
+            }
+
+            function getYearStatus(year) {
+                if (year < todayYear) return "past";
+                if (year > todayYear) return "future";
+                return "current";
+            }
+
+            function getWeekStatus(year, week) {
+                const yearStatus = getYearStatus(year);
+                if (yearStatus === "past") return "past";
+                if (yearStatus === "future") return "future";
+
+                const range = getWeekRange(year, week);
+                if (range.end < today) return "past";
+                if (range.start > today) return "future";
+                return "current";
+            }
+
+            function yearStatusLabel(status) {
+                const t = labels[state.lang];
+                return status === "past" ? t.pastYear : status === "future" ? t.futureYear : t.currentYear;
+            }
+
+            function statusLabel(status) {
+                const t = labels[state.lang];
+                return status === "past" ? t.past : status === "future" ? t.future : t.current;
+            }
+
+            function getPlannerWeekForDate(date) {
+                const start = plannerYearStart(date.getFullYear());
+                const diff = Math.floor((startOfDay(date) - start) / DAY_MS);
+                return Math.min(Math.floor(diff / 7) + 1, weeksInPlannerYear(date.getFullYear()));
+            }
+
+            function weeksInPlannerYear(year) {
+                const start = plannerYearStart(year);
+                const nextStart = plannerYearStart(year + 1);
+                return Math.round((nextStart - start) / DAY_MS / 7);
+            }
+
+            function plannerYearStart(year) {
+                const janOne = new Date(year, 0, 1);
+                const offsetFromSaturday = (janOne.getDay() + 1) % 7;
+                return startOfDay(new Date(year, 0, 1 - offsetFromSaturday));
+            }
+
+            function getWeekRange(year, week) {
+                const start = addDays(plannerYearStart(year), (week - 1) * 7);
+                return {
+                    start,
+                    end: addDays(start, 6)
+                };
+            }
+
+            function addDays(date, days) {
+                const next = new Date(date);
+                next.setDate(next.getDate() + days);
+                return startOfDay(next);
+            }
+
+            function startOfDay(date) {
+                const next = new Date(date);
+                next.setHours(0, 0, 0, 0);
+                return next;
+            }
+
+            function sameDay(first, second) {
+                return first.getFullYear() === second.getFullYear()
+                    && first.getMonth() === second.getMonth()
+                    && first.getDate() === second.getDate();
+            }
+
+            function formatDate(date, options) {
+                const locale = state.lang === "ar" ? "ar-SA-u-ca-gregory" : "en-US";
+                return new Intl.DateTimeFormat(locale, options).format(date);
+            }
+
+            function createId(prefix) {
+                return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+            }
+
+            function normalizeText(value) {
+                return String(value || "").trim().toLowerCase();
+            }
+
+            function escapeHtml(value) {
+                return String(value)
+                    .replaceAll("&", "&amp;")
+                    .replaceAll("<", "&lt;")
+                    .replaceAll(">", "&gt;")
+                    .replaceAll('"', "&quot;")
+                    .replaceAll("'", "&#039;");
+            }
+        })();
+    </script>
+</body>
+</html>
