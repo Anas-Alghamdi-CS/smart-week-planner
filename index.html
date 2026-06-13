@@ -673,21 +673,23 @@
         }
 
         .days-grid {
-            display: grid;
-            grid-template-columns: repeat(7, minmax(0, 1fr));
-            gap: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
         }
 
         .day-card {
             min-width: 0;
-            min-height: 360px;
-            display: flex;
-            flex-direction: column;
+            width: 100%;
+            display: grid;
+            grid-template-columns: 180px 1fr;
+            grid-template-rows: 1fr;
             border: 1px solid var(--line);
             border-radius: var(--radius);
             background: color-mix(in srgb, var(--surface) 92%, var(--surface-soft));
             overflow: hidden;
-            box-shadow: 0 14px 30px color-mix(in srgb, var(--primary) 8%, transparent);
+            box-shadow: 0 4px 18px color-mix(in srgb, var(--primary) 8%, transparent);
+            min-height: 120px;
         }
 
         .day-card.past-day {
@@ -702,11 +704,12 @@
         }
 
         .day-head {
-            min-height: 74px;
-            display: grid;
-            gap: 4px;
-            padding: 13px 13px 10px;
-            border-bottom: 1px solid var(--line);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 6px;
+            padding: 16px 20px;
+            border-inline-end: 1px solid var(--line);
             background:
                 linear-gradient(135deg, color-mix(in srgb, var(--surface-soft) 88%, transparent), transparent),
                 var(--surface);
@@ -729,25 +732,30 @@
         }
 
         .task-list {
-            display: grid;
-            align-content: start;
-            gap: 9px;
+            display: flex;
+            flex-wrap: wrap;
+            align-content: flex-start;
+            gap: 10px;
             flex: 1;
             margin: 0;
-            padding: 12px;
+            padding: 14px 16px;
             list-style: none;
+            min-height: 90px;
         }
 
         .task-item {
             display: grid;
-            grid-template-columns: 28px minmax(0, 1fr) 32px;
+            grid-template-columns: 26px minmax(0, 1fr) 30px;
             gap: 8px;
             align-items: start;
-            padding: 10px;
+            padding: 10px 12px;
             border: 1px solid var(--line);
             border-inline-start: 4px solid var(--primary);
             border-radius: var(--radius);
             background: color-mix(in srgb, var(--surface-soft) 86%, var(--surface));
+            min-width: 220px;
+            max-width: 380px;
+            flex: 1 1 220px;
         }
 
         .task-item[data-priority="high"] {
@@ -842,13 +850,14 @@
 
         .add-task {
             min-height: 44px;
-            margin: 0 12px 12px;
+            margin: 0 16px 16px;
             border: 1px dashed var(--primary);
             border-radius: var(--radius);
             background: transparent;
             color: var(--primary-strong);
             cursor: pointer;
             font-weight: 950;
+            margin-top: auto;
         }
 
         .add-task:hover {
@@ -969,8 +978,8 @@
         }
 
         @media (max-width: 1180px) {
-            .days-grid {
-                grid-template-columns: repeat(4, minmax(170px, 1fr));
+            .day-card {
+                grid-template-columns: 140px 1fr;
             }
         }
 
@@ -1013,7 +1022,10 @@
             }
 
             .days-grid {
-                grid-template-columns: repeat(2, minmax(160px, 1fr));
+                gap: 10px;
+            }
+            .day-card {
+                grid-template-columns: 120px 1fr;
             }
         }
 
@@ -1034,6 +1046,17 @@
 
             h1 {
                 font-size: 30px;
+            }
+
+            .day-card {
+                grid-template-columns: 1fr;
+            }
+            
+            .day-head {
+                border-inline-end: none;
+                border-bottom: 1px solid var(--line);
+                min-height: auto;
+                padding: 12px 16px;
             }
 
             .control-band,
@@ -2187,9 +2210,16 @@
                     addBtn.textContent = t.addTask;
                     addBtn.addEventListener("click", () => openTaskDialog(dayKey));
 
+                    const bodyWrap = document.createElement("div");
+                    bodyWrap.style.display = "flex";
+                    bodyWrap.style.flexDirection = "column";
+                    bodyWrap.style.flex = "1";
+                    bodyWrap.style.minWidth = "0";
+                    bodyWrap.appendChild(list);
+                    bodyWrap.appendChild(addBtn);
+
                     card.appendChild(head);
-                    card.appendChild(list);
-                    card.appendChild(addBtn);
+                    card.appendChild(bodyWrap);
                     dom.daysContainer.appendChild(card);
                 }
             }
