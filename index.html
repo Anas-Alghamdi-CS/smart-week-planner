@@ -1814,20 +1814,28 @@
             window.addEventListener('DOMContentLoaded', async () => {
                 // 1. إعطاء حركة التحميل وقتها الكامل لتكتمل (2.2 ثانية)
                 await sleep(2200);
+                
+                // إخفاء التحميل بشكل قطعي ومبكر لتجنب تعليق الشاشة
+                hideSplash();
 
-                // 2. فحص حالة الجلسة بشكل قطعي ومباشر (يمنع تعليق متصفح بريف)
-                const { data: { session } } = await _sb.auth.getSession();
+                try {
+                    // 2. فحص حالة الجلسة بشكل صريح داخل try/catch
+                    const { data: { session } } = await _sb.auth.getSession();
 
-                if (session?.user) {
-                    currentUser = session.user;
-                    const cloudState = await loadStateFromCloud();
-                    state = cloudState || loadStateFromCache();
-                    bindEvents();
-                    showApp();
-                    render();
-                } else {
+                    if (session?.user) {
+                        currentUser = session.user;
+                        const cloudState = await loadStateFromCloud();
+                        state = cloudState || loadStateFromCache();
+                        bindEvents();
+                        showApp();
+                        render();
+                    } else {
+                        currentUser = null;
+                        showAuth();
+                    }
+                } catch (e) {
+                    console.error("Boot error:", e);
                     currentUser = null;
-                    hideSplash();
                     showAuth();
                 }
             });
