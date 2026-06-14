@@ -8,6 +8,8 @@
 
 **[Open Smart Week Planner →](https://Anas-Alghamdi-CS.github.io/smart-week-planner/)**
 
+YouTube link: [https://youtu.be/byRg95wtG18](https://youtu.be/byRg95wtG18)
+
 ---
 
 ## Demo Credentials
