@@ -4,10 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="مخطط أسابيع ذكي بمهام ومستخدمين محليين، قابل للنشر على GitHub Pages.">
-    <meta name="theme-color" content="#0A1931">
+    <meta name="theme-color" content="#f6fafd">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Week Planner">
     <link rel="manifest" href="./manifest.webmanifest">
+    <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
+    <link rel="apple-touch-icon" href="./icons/icon-192.png">
     <title>مخطط الأسابيع الذكي</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // Apply the last used theme/language before first paint so nothing flashes
+        (function () {
+            try {
+                var pref = JSON.parse(localStorage.getItem("weeklyPlanner.prefs") || "null") || {};
+                var dark = window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches;
+                var theme = pref.theme || (dark ? "dark" : "light");
+                var root = document.documentElement;
+                root.setAttribute("data-theme", theme);
+                if (pref.lang === "en") { root.lang = "en"; root.dir = "ltr"; }
+                var meta = document.querySelector('meta[name="theme-color"]');
+                if (meta) meta.setAttribute("content", theme === "dark" ? "#030913" : "#f6fafd");
+            } catch (e) {}
+        })();
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
     <style>
         :root {
             color-scheme: light;
@@ -175,13 +195,45 @@
             line-height: 1.8;
         }
 
-        .header-actions,
-        .toolbar,
-        .inline-actions,
-        .metric-row {
+        .header-actions {
             display: flex;
             align-items: center;
             gap: 10px;
+        }
+
+        .sync-pill {
+            min-height: 42px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 0 12px;
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            background: color-mix(in srgb, var(--surface) 84%, var(--surface-soft));
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 800;
+            white-space: nowrap;
+            cursor: default;
+        }
+
+        .sync-pill::before {
+            content: "";
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: var(--accent);
+        }
+
+        .sync-pill[data-state="synced"]::before { background: #2e9e6b; }
+        .sync-pill[data-state="syncing"]::before { background: var(--accent); animation: syncPulse 1s ease-in-out infinite; }
+        .sync-pill[data-state="pending"]::before { background: #d9a21b; }
+        .sync-pill[data-state="offline"]::before,
+        .sync-pill[data-state="error"]::before { background: #d4483b; }
+        .sync-pill[data-state="error"] { cursor: pointer; }
+
+        @keyframes syncPulse {
+            50% { opacity: 0.3; }
         }
 
         .user-chip {
@@ -216,8 +268,7 @@
         }
 
         .icon-button,
-        .text-button,
-        .danger-button {
+        .text-button {
             min-height: 42px;
             border: 1px solid var(--line);
             border-radius: var(--radius);
@@ -234,8 +285,7 @@
             line-height: 1;
         }
 
-        .text-button,
-        .danger-button {
+        .text-button {
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -251,13 +301,8 @@
             box-shadow: 0 10px 24px rgba(10, 25, 49, 0.16);
         }
 
-        .danger-button {
-            color: var(--danger);
-        }
-
         .icon-button:hover,
-        .text-button:hover,
-        .danger-button:hover {
+        .text-button:hover {
             transform: translateY(-1px);
             border-color: var(--primary);
             background: var(--primary-soft);
@@ -907,41 +952,6 @@
             padding-top: 4px;
         }
 
-        .auth-note {
-            padding: 12px;
-            border: 1px solid var(--line);
-            border-radius: var(--radius);
-            background:
-                linear-gradient(135deg, color-mix(in srgb, var(--primary-soft) 76%, transparent), transparent),
-                var(--surface);
-            color: var(--muted);
-            font-size: 13px;
-            font-weight: 800;
-            line-height: 1.7;
-        }
-
-        .profile-list {
-            display: grid;
-            gap: 8px;
-        }
-
-        .profile-row {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) auto;
-            gap: 8px;
-            align-items: center;
-            padding: 9px;
-            border: 1px solid var(--line);
-            border-radius: var(--radius);
-            background: color-mix(in srgb, var(--surface) 88%, var(--surface-soft));
-        }
-
-        .profile-row strong {
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
         .swatches {
             display: flex;
             flex-wrap: wrap;
@@ -991,8 +1001,7 @@
                 flex-direction: column;
             }
 
-            .header-actions,
-            .toolbar {
+            .header-actions {
                 justify-content: flex-start;
             }
 
@@ -1286,6 +1295,7 @@
                     <p class="subtitle" id="app-subtitle"></p>
                 </div>
                 <div class="header-actions">
+                    <span class="sync-pill" id="sync-status" data-state="synced" role="status" aria-live="polite"></span>
                     <div class="user-chip" id="account-button" style="cursor:default">
                         <span class="avatar" id="account-avatar">م</span>
                         <span id="account-name"></span>
@@ -1369,32 +1379,6 @@
         </div>
     </div>
 
-    <dialog id="account-dialog">
-        <form class="dialog-form" id="account-form">
-            <div class="dialog-head">
-                <h3 id="account-dialog-title"></h3>
-                <button class="icon-button" type="button" id="close-account-dialog" aria-label="إغلاق">×</button>
-            </div>
-            <p class="auth-note" id="account-note"></p>
-            <div class="field">
-                <label for="account-input" id="account-input-label"></label>
-                <input id="account-input" maxlength="36" autocomplete="username" required>
-            </div>
-            <div class="field">
-                <label for="account-passcode" id="account-passcode-label"></label>
-                <input id="account-passcode" type="password" maxlength="72" autocomplete="current-password" required>
-            </div>
-            <div class="field">
-                <span class="field-label" id="profiles-label"></span>
-                <div class="profile-list" id="profile-list"></div>
-            </div>
-            <div class="dialog-actions">
-                <button class="text-button" type="button" id="cancel-account-button"></button>
-                <button class="text-button primary" type="submit" id="save-account-button"></button>
-            </div>
-        </form>
-    </dialog>
-
     <dialog id="task-dialog">
         <form class="dialog-form" id="task-form">
             <div class="dialog-head">
@@ -1450,15 +1434,22 @@
             /* ── Supabase ─────────────────────────────────────────── */
             const SUPABASE_URL  = 'https://eedmanyydspgyxjpzxae.supabase.co';
             const SUPABASE_ANON = 'sb_publishable_TjqQ_1GgM3MjMRfB5PNrDA_BaHac350';
-            const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+            // The CDN script may be missing on a first offline launch; the app then runs in local-only mode
+            const _sb = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON) : null;
 
             /* ── Constants ────────────────────────────────────────── */
             const CACHE_KEY_PREFIX = "weeklyPlanner.cloud.v1";
+            const PREFS_KEY        = "weeklyPlanner.prefs";
+            const LAST_USER_KEY    = "weeklyPlanner.lastUser";
             const DAY_MS           = 24 * 60 * 60 * 1000;
-            const today            = startOfDay(new Date());
-            const todayYear        = today.getFullYear();
-            const currentPlannerWeek = getPlannerWeekForDate(today);
+            const SYNC_DEBOUNCE_MS = 1500;
+            const SYNC_RETRY_MS    = [5000, 15000, 60000];
             const phaseColors      = ["#0A1931", "#1A3D63", "#4A7FA7", "#B3CFE5", "#F6FAFD"];
+
+            // Calendar "today" is recomputed when the day rolls over (see refreshToday)
+            let today              = startOfDay(new Date());
+            let todayYear          = getPlannerYearForDate(today);
+            let currentPlannerWeek = getPlannerWeekForDate(today);
 
             /* ── Labels (bilingual) ───────────────────────────────── */
             const labels = {
@@ -1516,7 +1507,23 @@
                     deletePhaseConfirm: "حذف المرحلة وكل مهامها؟",
                     lastPhaseWarning: "لا يمكن حذف آخر مرحلة.",
                     defaultPhases: { study: "الدراسة", work: "العمل", personal: "شخصي" },
-                    signOutConfirm: "هل تريد تسجيل الخروج؟"
+                    signOutConfirm: "هل تريد تسجيل الخروج؟",
+                    sync: {
+                        synced: "تم الحفظ",
+                        syncing: "جارٍ المزامنة…",
+                        pending: "تعديلات بانتظار المزامنة",
+                        offline: "بدون اتصال — محفوظ محليًا",
+                        error: "فشلت المزامنة — اضغط لإعادة المحاولة",
+                        local: "وضع محلي"
+                    },
+                    errors: {
+                        network: "تعذر الاتصال بالخادم. تحقق من الإنترنت وحاول مجددًا.",
+                        credentials: "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
+                        weakPassword: "كلمة المرور يجب ألا تقل عن 6 خانات.",
+                        exists: "هذا البريد مسجل مسبقًا.",
+                        generic: "حدث خطأ غير متوقع. حاول مجددًا."
+                    },
+                    accountCreated: "تم إنشاء الحساب! سجّل دخولك الآن."
                 },
                 en: {
                     appTitle: "Smart Week Planner",
@@ -1567,7 +1574,23 @@
                     deletePhaseConfirm: "Delete this phase and all its tasks?",
                     lastPhaseWarning: "You cannot delete the last phase.",
                     defaultPhases: { study: "Study", work: "Work", personal: "Personal" },
-                    signOutConfirm: "Sign out?"
+                    signOutConfirm: "Sign out?",
+                    sync: {
+                        synced: "Saved",
+                        syncing: "Syncing…",
+                        pending: "Changes waiting to sync",
+                        offline: "Offline — saved locally",
+                        error: "Sync failed — tap to retry",
+                        local: "Local mode"
+                    },
+                    errors: {
+                        network: "Cannot reach the server. Check your connection and try again.",
+                        credentials: "Incorrect email or password.",
+                        weakPassword: "Password must be at least 6 characters.",
+                        exists: "This email is already registered.",
+                        generic: "Something went wrong. Please try again."
+                    },
+                    accountCreated: "Account created! Sign in now."
                 }
             };
 
@@ -1594,6 +1617,7 @@
                 todayLine: document.getElementById("today-line"),
                 appTitle: document.getElementById("app-title"),
                 appSubtitle: document.getElementById("app-subtitle"),
+                syncStatus: document.getElementById("sync-status"),
                 accountButton: document.getElementById("account-button"),
                 accountAvatar: document.getElementById("account-avatar"),
                 accountName: document.getElementById("account-name"),
@@ -1653,16 +1677,33 @@
             };
 
             /* ── Runtime state ────────────────────────────────────── */
-            let currentUser  = null;
-            let state        = null;
-            let taskEditor   = { dayKey: null, taskId: null };
-            let phaseEditor  = { id: null };
-            let _syncTimer   = null;
+            let currentUser   = null;
+            let state         = null;
+            let activeUserId  = null;   // user whose state is loaded; guards duplicate auth events
+            let offlineMode   = false;  // true when running from the cached identity without a live session
+            let taskEditor    = { dayKey: null, taskId: null };
+            let phaseEditor   = { id: null };
+
+            // Cloud sync bookkeeping: one request in flight at a time, latest snapshot always wins
+            const sync = { timer: null, retryTimer: null, inFlight: false, dirty: false, retries: 0 };
+
+            /* ── Preferences (theme/language), readable before login ─ */
+            function readPrefs() {
+                try { return JSON.parse(localStorage.getItem(PREFS_KEY) || "null") || {}; } catch { return {}; }
+            }
+
+            function savePrefs() {
+                if (!state) return;
+                try { localStorage.setItem(PREFS_KEY, JSON.stringify({ theme: state.theme, lang: state.lang })); } catch {}
+            }
+
+            function currentLabels() {
+                return labels[state?.lang || readPrefs().lang || "ar"];
+            }
 
             /* ── Overlay helpers ──────────────────────────────────── */
-            function showSplash() { dom.splash.classList.remove("hidden"); }
             function hideSplash() { dom.splash.classList.add("hidden"); }
-            function showAuth()   { dom.authScreen.classList.remove("hidden"); dom.appShell.style.display = "none"; }
+            function showAuth()   { hideSplash(); dom.authScreen.classList.remove("hidden"); dom.appShell.style.display = "none"; }
             function hideAuth()   { dom.authScreen.classList.add("hidden"); }
             function showApp()    { hideSplash(); hideAuth(); dom.appShell.style.display = ""; }
 
@@ -1675,15 +1716,32 @@
             }
 
             /* ── Auth handlers ────────────────────────────────────── */
+            function authErrorMessage(error) {
+                const t   = currentLabels().errors;
+                const msg = String(error?.message || "").toLowerCase();
+                if (msg.includes("invalid login") || msg.includes("invalid credentials")) return t.credentials;
+                if (msg.includes("already")) return t.exists;
+                if (msg.includes("password")) return t.weakPassword;
+                if (msg.includes("fetch") || msg.includes("network") || !navigator.onLine) return t.network;
+                return t.generic;
+            }
+
             async function handleLogin(e) {
                 e.preventDefault();
                 const email = dom.loginEmail.value.trim();
                 const pass  = dom.loginPass.value;
                 dom.loginError.textContent = "";
+                if (!_sb) { dom.loginError.textContent = currentLabels().errors.network; return; }
                 dom.loginBtn.disabled = true;
-                const { error } = await _sb.auth.signInWithPassword({ email, password: pass });
-                dom.loginBtn.disabled = false;
-                if (error) dom.loginError.textContent = error.message;
+                try {
+                    const { error } = await _sb.auth.signInWithPassword({ email, password: pass });
+                    if (error) dom.loginError.textContent = authErrorMessage(error);
+                } catch (err) {
+                    console.error("Login failed:", err);
+                    dom.loginError.textContent = authErrorMessage(err);
+                } finally {
+                    dom.loginBtn.disabled = false;
+                }
             }
 
             async function handleSignup(e) {
@@ -1691,64 +1749,119 @@
                 const name  = dom.signupName.value.trim();
                 const email = dom.signupEmail.value.trim();
                 const pass  = dom.signupPass.value;
+                const t     = currentLabels();
                 dom.signupError.textContent   = "";
                 dom.signupSuccess.textContent = "";
+                if (!_sb) { dom.signupError.textContent = t.errors.network; return; }
+                if (pass.length < 6) { dom.signupError.textContent = t.errors.weakPassword; return; }
                 dom.signupBtn.disabled = true;
-                const { error } = await _sb.auth.signUp({
-                    email,
-                    password: pass,
-                    options: { data: { name } }
-                });
-                dom.signupBtn.disabled = false;
-                if (error) {
-                    dom.signupError.textContent = error.message;
-                } else {
-                    dom.signupSuccess.textContent = state?.lang === "ar"
-                        ? "تم إنشاء الحساب! سجّل دخولك الآن."
-                        : "Account created! Sign in now.";
-                    setTimeout(() => toggleAuthMode("login"), 2000);
+                try {
+                    const { error } = await _sb.auth.signUp({ email, password: pass, options: { data: { name } } });
+                    if (error) {
+                        dom.signupError.textContent = authErrorMessage(error);
+                    } else {
+                        dom.signupSuccess.textContent = t.accountCreated;
+                        setTimeout(() => toggleAuthMode("login"), 2000);
+                    }
+                } catch (err) {
+                    console.error("Signup failed:", err);
+                    dom.signupError.textContent = authErrorMessage(err);
+                } finally {
+                    dom.signupBtn.disabled = false;
                 }
             }
 
             async function handleSignOut() {
-                const t = labels[state?.lang || "ar"];
-                if (!confirm(t.signOutConfirm)) return;
-                await _sb.auth.signOut();
+                if (!confirm(currentLabels().signOutConfirm)) return;
+                try {
+                    // Push pending edits first; if that fails they stay cached and are pushed after the next login
+                    await syncNow();
+                    try { localStorage.removeItem(LAST_USER_KEY); } catch {}
+                    if (_sb) await _sb.auth.signOut();
+                } catch (err) {
+                    console.error("Sign out failed:", err);
+                }
+                // Do not rely on the auth event alone: it never fires when we are offline
+                leaveApp();
             }
 
-            /* ── Cloud data sync ──────────────────────────────────── */
-            function getCacheKey() {
-                return `${CACHE_KEY_PREFIX}.${currentUser?.id || "anon"}`;
+            /* ── Sync status indicator ────────────────────────────── */
+            function setSyncStatus(status) {
+                const t = currentLabels().sync;
+                dom.syncStatus.dataset.state = status === "local" ? "offline" : status;
+                dom.syncStatus.textContent   = t[status] || "";
+                dom.syncStatus.title         = t[status] || "";
             }
 
-            async function loadStateFromCloud() {
+            function idleSyncStatus() {
+                if (!_sb)                return "local";
+                if (!navigator.onLine)   return "offline";
+                return sync.dirty ? "pending" : "synced";
+            }
+
+            /* ── Local cache (offline-first) ──────────────────────── */
+            function getCacheKey() { return `${CACHE_KEY_PREFIX}.${activeUserId || "anon"}`; }
+            function getDirtyKey() { return `${getCacheKey()}.dirty`; }
+
+            function readCache() {
+                try {
+                    const saved = JSON.parse(localStorage.getItem(getCacheKey()) || "null");
+                    return saved && typeof saved === "object" ? saved : null;
+                } catch { return null; }
+            }
+
+            function writeCache(snapshot) {
+                try { localStorage.setItem(getCacheKey(), JSON.stringify(snapshot)); } catch {}
+            }
+
+            // The dirty flag survives reloads so unsynced offline edits are never overwritten by older cloud data
+            function setDirty(value) {
+                sync.dirty = value;
+                try {
+                    if (value) localStorage.setItem(getDirtyKey(), "1");
+                    else localStorage.removeItem(getDirtyKey());
+                } catch {}
+            }
+
+            function wasDirty() {
+                try { return localStorage.getItem(getDirtyKey()) === "1"; } catch { return false; }
+            }
+
+            async function loadUserState() {
+                const cached = readCache();
+
+                // Unsynced local edits win over whatever the cloud holds
+                if (cached && wasDirty()) { setDirty(true); scheduleSync(); return buildState(cached); }
+
+                if (!_sb || !navigator.onLine || offlineMode) {
+                    return cached ? buildState(cached) : buildDefaultState();
+                }
+
                 try {
                     const { data, error } = await _sb
                         .from("user_tasks")
                         .select("state_json")
                         .eq("user_id", currentUser.id)
-                        .single();
-                    if (error || !data?.state_json) return null;
-                    try {
-                        localStorage.setItem(getCacheKey(), JSON.stringify(data.state_json));
-                    } catch {}
-                    return buildState(data.state_json);
-                } catch { return null; }
-            }
-
-            function loadStateFromCache() {
-                try {
-                    const raw = localStorage.getItem(getCacheKey());
-                    const saved = JSON.parse(raw || "null");
-                    if (!saved || typeof saved !== "object") return buildDefaultState();
-                    return buildState(saved);
-                } catch { return buildDefaultState(); }
+                        .maybeSingle();
+                    if (error) throw error;
+                    if (data?.state_json) {
+                        writeCache(data.state_json);
+                        return buildState(data.state_json);
+                    }
+                    // No cloud row yet: keep any local data and create the row on the first sync
+                    if (cached) { setDirty(true); scheduleSync(); return buildState(cached); }
+                    return buildDefaultState();
+                } catch (err) {
+                    console.error("Cloud load failed, using cache:", err);
+                    return cached ? buildState(cached) : buildDefaultState();
+                }
             }
 
             function buildDefaultState() {
+                const prefs = readPrefs();
                 return {
-                    lang: "ar",
-                    theme: window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light",
+                    lang: prefs.lang === "en" ? "en" : "ar",
+                    theme: prefs.theme || (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"),
                     selectedYear: todayYear,
                     selectedWeek: currentPlannerWeek,
                     activePhaseId: "study",
@@ -1769,8 +1882,14 @@
                     ...fallback,
                     ...saved,
                     phases: Array.isArray(saved.phases) && saved.phases.length ? saved.phases : fallback.phases,
-                    tasks:  saved.tasks && typeof saved.tasks === "object" ? saved.tasks : {}
+                    tasks:  {}
                 };
+                // Normalize every task once here so reads stay allocation-free
+                if (saved.tasks && typeof saved.tasks === "object") {
+                    Object.entries(saved.tasks).forEach(([key, list]) => {
+                        if (Array.isArray(list) && list.length) merged.tasks[key] = list.map(normalizeTask);
+                    });
+                }
                 if (!merged.phases.some(p => p.id === merged.activePhaseId)) {
                     merged.activePhaseId = merged.phases[0].id;
                 }
@@ -1791,73 +1910,204 @@
                 };
             }
 
+            /* ── Save + debounced cloud sync ──────────────────────── */
             function saveState() {
-                const snapshot = getStateSnapshot();
-                try { localStorage.setItem(getCacheKey(), JSON.stringify(snapshot)); } catch {}
-                if (_syncTimer) clearTimeout(_syncTimer);
-                _syncTimer = setTimeout(() => syncToCloud(snapshot), 1500);
+                if (!state) return;
+                writeCache(getStateSnapshot());
+                savePrefs();
+                setDirty(true);
+                setSyncStatus(idleSyncStatus());
+                scheduleSync();
             }
 
-            async function syncToCloud(snapshot) {
-                if (!currentUser) return;
+            function scheduleSync() {
+                if (!_sb) return;
+                clearTimeout(sync.timer);
+                sync.timer = setTimeout(syncNow, SYNC_DEBOUNCE_MS);
+            }
+
+            function scheduleRetry() {
+                clearTimeout(sync.retryTimer);
+                const delay = SYNC_RETRY_MS[Math.min(sync.retries, SYNC_RETRY_MS.length - 1)];
+                sync.retries += 1;
+                sync.retryTimer = setTimeout(syncNow, delay);
+            }
+
+            async function syncNow() {
+                clearTimeout(sync.timer);
+                sync.timer = null;
+                if (!_sb || !currentUser || !state || !sync.dirty) return;
+                if (sync.inFlight) return;               // the running request re-checks the dirty flag when it ends
+                if (offlineMode || !navigator.onLine) { setSyncStatus("offline"); return; }
+
+                sync.inFlight = true;
+                sync.dirty    = false;                   // edits made while the request runs set it back to true
+                setSyncStatus("syncing");
                 try {
-                    await _sb.from("user_tasks").upsert(
-                        { user_id: currentUser.id, state_json: snapshot },
+                    const { error } = await _sb.from("user_tasks").upsert(
+                        { user_id: currentUser.id, state_json: getStateSnapshot() },
                         { onConflict: "user_id" }
                     );
-                } catch {}
+                    if (error) throw error;
+                    sync.retries = 0;
+                    clearTimeout(sync.retryTimer);
+                } catch (err) {
+                    console.error("Cloud sync failed:", err);
+                    sync.inFlight = false;
+                    sync.dirty    = true;
+                    setSyncStatus(navigator.onLine ? "error" : "offline");
+                    scheduleRetry();
+                    return;
+                }
+                sync.inFlight = false;
+
+                if (sync.dirty) {                         // newer edits arrived mid-request
+                    setSyncStatus("pending");
+                    scheduleSync();
+                } else {
+                    setDirty(false);
+                    setSyncStatus("synced");
+                }
             }
 
-            /* ── App Boot Sequence (الإقلاع الآمن) ────────────────── */
+            /* ── Session lifecycle ────────────────────────────────── */
+            async function enterApp(user, { offline = false } = {}) {
+                if (activeUserId === user.id && state) return;   // duplicate auth event for the same user
+                activeUserId = user.id;
+                currentUser  = user;
+                offlineMode  = offline;
+                try {
+                    localStorage.setItem(LAST_USER_KEY, JSON.stringify({
+                        id: user.id, email: user.email, name: user.user_metadata?.name || ""
+                    }));
+                } catch {}
+
+                state = await loadUserState();
+                bindEvents();
+                showApp();
+                render();
+                setSyncStatus(idleSyncStatus());
+            }
+
+            function leaveApp() {
+                clearTimeout(sync.timer);
+                clearTimeout(sync.retryTimer);
+                sync.inFlight = false;
+                sync.dirty    = false;
+                sync.retries  = 0;
+                currentUser   = null;
+                activeUserId  = null;
+                offlineMode   = false;
+                state         = null;
+                showAuth();
+            }
+
+            function readLastUser() {
+                try { return JSON.parse(localStorage.getItem(LAST_USER_KEY) || "null"); } catch { return null; }
+            }
+
+            // Leave offline mode once a real session is available again
+            async function recoverSession() {
+                if (!_sb || !offlineMode) return;
+                try {
+                    const { data: { session } } = await _sb.auth.getSession();
+                    if (session?.user && session.user.id === activeUserId) {
+                        currentUser = session.user;
+                        offlineMode = false;
+                    }
+                } catch (err) {
+                    console.error("Session recovery failed:", err);
+                }
+            }
+
+            /* ── App boot ─────────────────────────────────────────── */
             const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-            window.addEventListener('DOMContentLoaded', async () => {
-                // 1. إعطاء حركة التحميل وقتها الكامل لتكتمل (2.2 ثانية)
-                await sleep(2200);
-                
-                // إخفاء التحميل بشكل قطعي ومبكر لتجنب تعليق الشاشة
-                hideSplash();
-
-                try {
-                    // 2. فحص حالة الجلسة بشكل صريح داخل try/catch
-                    const { data: { session } } = await _sb.auth.getSession();
-
-                    if (session?.user) {
-                        currentUser = session.user;
-                        const cloudState = await loadStateFromCloud();
-                        state = cloudState || loadStateFromCache();
-                        bindEvents();
-                        showApp();
-                        render();
-                    } else {
-                        currentUser = null;
-                        showAuth();
+            async function restoreSession() {
+                let session = null;
+                if (_sb) {
+                    try {
+                        const result = await _sb.auth.getSession();
+                        session = result.data.session;
+                    } catch (err) {
+                        console.error("Session restore failed:", err);
                     }
-                } catch (e) {
-                    console.error("Boot error:", e);
-                    currentUser = null;
+                }
+                if (session?.user) return enterApp(session.user);
+
+                // Offline launch: reuse the last known identity so the cached planner stays usable
+                const last = readLastUser();
+                if (last?.id && (!_sb || !navigator.onLine)) {
+                    return enterApp({ id: last.id, email: last.email, user_metadata: { name: last.name } }, { offline: true });
+                }
+                showAuth();
+            }
+
+            window.addEventListener("DOMContentLoaded", async () => {
+                // Keep the splash visible briefly while the session restores in parallel
+                try {
+                    await Promise.all([sleep(900), restoreSession()]);
+                } catch (err) {
+                    console.error("Boot error:", err);
                     showAuth();
                 }
+                hideSplash();
+                registerServiceWorker();
             });
 
-            /* ── Supabase auth listener ───────────────────────────── */
-            // وظيفة هذا المستمع الآن تقتصر فقط على التفاعل إذا قام المستخدم بتسجيل الدخول أو الخروج أثناء استخدامه للموقع
-            _sb.auth.onAuthStateChange(async (event, session) => {
-                if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
-                    if (session?.user) {
-                        currentUser = session.user;
-                        const cloudState = await loadStateFromCloud();
-                        state = cloudState || loadStateFromCache();
-                        bindEvents();
-                        showApp();
-                        render();
-                    } else {
-                        currentUser = null;
-                        hideSplash();
-                        showAuth();
+            // Auth listener only reacts to explicit sign-in/out; session restore is handled above
+            if (_sb) {
+                _sb.auth.onAuthStateChange((event, session) => {
+                    if (event === "SIGNED_IN" && session?.user) {
+                        // SIGNED_IN also fires on tab refocus: ignore it when this user is already loaded
+                        if (session.user.id === activeUserId) {
+                            currentUser = session.user;
+                            if (offlineMode) { offlineMode = false; syncNow(); }
+                            return;
+                        }
+                        // Defer so we never await Supabase calls inside the auth callback
+                        setTimeout(() => enterApp(session.user), 0);
+                    } else if (event === "SIGNED_OUT") {
+                        setTimeout(leaveApp, 0);
                     }
+                });
+            }
+
+            /* ── Connectivity + lifecycle ─────────────────────────── */
+            window.addEventListener("online", async () => {
+                await recoverSession();
+                if (state) {
+                    if (sync.dirty) syncNow(); else setSyncStatus(idleSyncStatus());
                 }
             });
+
+            window.addEventListener("offline", () => { if (state) setSyncStatus("offline"); });
+
+            document.addEventListener("visibilitychange", () => {
+                if (document.visibilityState === "hidden") {
+                    syncNow();                             // best-effort flush; the dirty flag covers failures
+                } else {
+                    refreshToday();
+                }
+            });
+
+            window.addEventListener("pagehide", () => { syncNow(); });
+
+            // Re-evaluate "today" so a planner left open past midnight rolls over
+            function refreshToday() {
+                const now = startOfDay(new Date());
+                if (sameDay(now, today)) return;
+                today              = now;
+                todayYear          = getPlannerYearForDate(today);
+                currentPlannerWeek = getPlannerWeekForDate(today);
+                if (state) render();
+            }
+            setInterval(refreshToday, 60000);
+
+            function registerServiceWorker() {
+                if (!("serviceWorker" in navigator) || location.protocol === "file:") return;
+                navigator.serviceWorker.register("./sw.js").catch(err => console.error("Service worker registration failed:", err));
+            }
 
             /* ── Event bindings ───────────────────────────────────── */
             let _eventsBound = false;
@@ -1867,14 +2117,19 @@
 
                 dom.themeToggle.addEventListener("click", () => {
                     state.theme = state.theme === "dark" ? "light" : "dark";
-                    saveState();
                     applyTheme();
+                    saveState();
                 });
 
                 dom.langToggle.addEventListener("click", () => {
                     state.lang = state.lang === "ar" ? "en" : "ar";
                     saveState();
                     render();
+                    setSyncStatus(idleSyncStatus());
+                });
+
+                dom.syncStatus.addEventListener("click", () => {
+                    if (dom.syncStatus.dataset.state === "error") { sync.retries = 0; syncNow(); }
                 });
 
                 dom.signoutButton.addEventListener("click", handleSignOut);
@@ -1916,6 +2171,49 @@
                     event.preventDefault();
                     savePhaseFromDialog();
                 });
+
+                // Delegated handlers: one listener per container instead of one per rendered element
+                dom.weekStrip.addEventListener("click", event => {
+                    const button = event.target.closest("[data-week]");
+                    if (!button) return;
+                    state.selectedWeek = Number(button.dataset.week);
+                    saveState();
+                    renderTimeline();
+                    renderStats();
+                    renderPhases();
+                    renderDays();
+                });
+
+                dom.phaseList.addEventListener("click", event => {
+                    const target = event.target.closest("[data-action]");
+                    if (!target) return;
+                    const phaseId = target.dataset.phaseId;
+                    if (target.dataset.action === "select") {
+                        state.activePhaseId = phaseId;
+                        saveState();
+                        renderPhases();
+                        renderStats();
+                        renderDays();
+                    } else if (target.dataset.action === "edit") {
+                        openPhaseDialog(phaseId);
+                    } else if (target.dataset.action === "delete") {
+                        deletePhase(phaseId);
+                    }
+                });
+
+                dom.daysContainer.addEventListener("click", event => {
+                    const target = event.target.closest("[data-action]");
+                    if (!target) return;
+                    const { action, dayKey, taskId } = target.dataset;
+                    if (action === "open")   openTaskDialog(dayKey, taskId);
+                    if (action === "add")    openTaskDialog(dayKey);
+                    if (action === "delete") deleteTask(dayKey, taskId);
+                });
+
+                dom.daysContainer.addEventListener("change", event => {
+                    const target = event.target.closest('[data-action="toggle"]');
+                    if (target) toggleTask(target.dataset.dayKey, target.dataset.taskId);
+                });
             }
 
             /* Auth form bindings (always active) */
@@ -1943,6 +2241,9 @@
             function applyTheme() {
                 dom.root.dataset.theme = state.theme;
                 dom.themeToggle.textContent = state.theme === "dark" ? "☀" : "☾";
+                document.querySelector('meta[name="theme-color"]')
+                    ?.setAttribute("content", state.theme === "dark" ? "#030913" : "#f6fafd");
+                savePrefs();
             }
 
             function applyLanguage() {
@@ -1950,6 +2251,7 @@
                 dom.root.lang = state.lang;
                 dom.root.dir  = state.lang === "ar" ? "rtl" : "ltr";
                 document.title = t.appTitle;
+                savePrefs();
                 dom.todayLine.textContent = `${t.todayPrefix}: ${formatDate(today, { weekday: "long", year: "numeric", month: "long", day: "numeric" })}`;
                 dom.appTitle.textContent    = t.appTitle;
                 dom.appSubtitle.textContent = t.subtitle;
@@ -2040,27 +2342,20 @@
                 dom.weekStatus.className   = `status-pill ${status}`;
                 dom.archiveNote.classList.toggle("show", status === "past" || getYearStatus(state.selectedYear) === "past");
 
-                dom.weekStrip.innerHTML = "";
+                // Built as one string and inserted once; clicks are handled by a delegated listener
+                const buttons = [];
                 for (let week = 1; week <= weeks; week += 1) {
                     const weekStatus = getWeekStatus(state.selectedYear, week);
                     const weekRange  = getWeekRange(state.selectedYear, week);
-                    const button = document.createElement("button");
-                    button.type      = "button";
-                    button.className = `week-button ${weekStatus} ${week === state.selectedWeek ? "active" : ""}`;
-                    button.setAttribute("aria-pressed", week === state.selectedWeek ? "true" : "false");
-                    button.innerHTML = `
-                        <span class="week-number">${t.week} ${week}</span>
-                        <span class="week-mini-date">${formatDate(weekRange.start, { month: "short", day: "numeric" })}</span>
-                    `;
-                    button.addEventListener("click", () => {
-                        state.selectedWeek = week;
-                        saveState();
-                        renderTimeline();
-                        renderStats();
-                        renderDays();
-                    });
-                    dom.weekStrip.appendChild(button);
+                    const isActive   = week === state.selectedWeek;
+                    buttons.push(`
+                        <button type="button" class="week-button ${weekStatus} ${isActive ? "active" : ""}"
+                                data-week="${week}" aria-pressed="${isActive}">
+                            <span class="week-number">${t.week} ${week}</span>
+                            <span class="week-mini-date">${formatDate(weekRange.start, { month: "short", day: "numeric" })}</span>
+                        </button>`);
                 }
+                dom.weekStrip.innerHTML = buttons.join("");
 
                 requestAnimationFrame(() => {
                     const active = dom.weekStrip.querySelector(".week-button.active");
@@ -2069,47 +2364,22 @@
             }
 
             function renderPhases() {
-                dom.phaseList.innerHTML = "";
-                state.phases.forEach(phase => {
-                    const row  = document.createElement("div");
-                    row.className = "phase-row";
-
-                    const item = document.createElement("button");
-                    item.type      = "button";
-                    item.className = `phase-item ${phase.id === state.activePhaseId ? "active" : ""}`;
-                    item.style.setProperty("--phase-color", phase.color || phaseColors[0]);
-                    item.innerHTML = `
-                        <span class="phase-color" aria-hidden="true"></span>
-                        <span class="phase-name">${escapeHtml(getPhaseName(phase))}</span>
-                        <span class="phase-count">${countTasksForPhase(phase.id)}</span>
-                    `;
-                    item.addEventListener("click", () => {
-                        state.activePhaseId = phase.id;
-                        saveState();
-                        renderPhases();
-                        renderStats();
-                        renderDays();
-                    });
-
-                    const editBtn = document.createElement("button");
-                    editBtn.type      = "button";
-                    editBtn.className = "mini-icon";
-                    editBtn.textContent = "✎";
-                    editBtn.setAttribute("aria-label", labels[state.lang].edit);
-                    editBtn.addEventListener("click", () => openPhaseDialog(phase.id));
-
-                    const delBtn = document.createElement("button");
-                    delBtn.type      = "button";
-                    delBtn.className = "mini-icon";
-                    delBtn.textContent = "×";
-                    delBtn.setAttribute("aria-label", labels[state.lang].delete);
-                    delBtn.addEventListener("click", () => deletePhase(phase.id));
-
-                    row.appendChild(item);
-                    row.appendChild(editBtn);
-                    row.appendChild(delBtn);
-                    dom.phaseList.appendChild(row);
-                });
+                const t = labels[state.lang];
+                dom.phaseList.innerHTML = state.phases.map(phase => {
+                    const id = escapeHtml(phase.id);
+                    return `
+                        <div class="phase-row">
+                            <button type="button" class="phase-item ${phase.id === state.activePhaseId ? "active" : ""}"
+                                    style="--phase-color: ${escapeHtml(phase.color || phaseColors[0])}"
+                                    data-action="select" data-phase-id="${id}">
+                                <span class="phase-color" aria-hidden="true"></span>
+                                <span class="phase-name">${escapeHtml(getPhaseName(phase))}</span>
+                                <span class="phase-count">${countTasksForPhase(phase.id)}</span>
+                            </button>
+                            <button type="button" class="mini-icon" data-action="edit" data-phase-id="${id}" aria-label="${t.edit}">✎</button>
+                            <button type="button" class="mini-icon" data-action="delete" data-phase-id="${id}" aria-label="${t.delete}">×</button>
+                        </div>`;
+                }).join("");
             }
 
             function renderStats() {
@@ -2127,109 +2397,58 @@
                 dom.progressFill.style.width   = `${pct}%`;
             }
 
+            function renderTask(task, dayKey, t) {
+                const dayAttr = escapeHtml(dayKey);
+                const idAttr  = escapeHtml(task.id);
+                const chips = [];
+                if (task.time) chips.push(`<span class="meta-chip">${escapeHtml(task.time)}</span>`);
+                if (task.priority && task.priority !== "normal") {
+                    chips.push(`<span class="meta-chip">${escapeHtml(t.priorities[task.priority] || task.priority)}</span>`);
+                }
+                return `
+                    <li class="task-item ${task.done ? "done" : ""}" data-priority="${escapeHtml(task.priority || "normal")}">
+                        <input type="checkbox" class="task-check" ${task.done ? "checked" : ""}
+                               aria-label="${escapeHtml(task.text)}"
+                               data-action="toggle" data-day-key="${dayAttr}" data-task-id="${idAttr}">
+                        <button type="button" class="task-main" data-action="open" data-day-key="${dayAttr}" data-task-id="${idAttr}">
+                            <span class="task-text">${escapeHtml(task.text)}</span>
+                            <div class="task-meta">${chips.join("")}</div>
+                        </button>
+                        <button type="button" class="delete-task" data-action="delete" data-day-key="${dayAttr}"
+                                data-task-id="${idAttr}" aria-label="${t.delete}">×</button>
+                    </li>`;
+            }
+
             function renderDays() {
                 const t     = labels[state.lang];
                 const range = getWeekRange(state.selectedYear, state.selectedWeek);
                 const query = normalizeText(state.search);
-                dom.daysContainer.innerHTML = "";
+                const cards = [];
 
                 for (let dayIndex = 0; dayIndex < 7; dayIndex += 1) {
                     const dayDate = addDays(range.start, dayIndex);
-                    const isPast  = dayDate < today && !sameDay(dayDate, today);
                     const isToday = sameDay(dayDate, today);
+                    const isPast  = dayDate < today && !isToday;
                     const dayKey  = getDayKey(dayIndex);
                     const tasks   = getTasks(dayKey).filter(task => taskMatches(task, query));
 
-                    const card = document.createElement("div");
-                    card.className = `day-card ${isPast ? "past-day" : ""} ${isToday ? "today" : ""}`;
+                    const items = tasks.length
+                        ? tasks.map(task => renderTask(task, dayKey, t)).join("")
+                        : `<li class="empty-state">${query ? t.emptyFiltered : t.empty}</li>`;
 
-                    const head = document.createElement("div");
-                    head.className = "day-head";
-                    head.innerHTML = `
-                        <span class="day-name">${t.days[dayIndex]}</span>
-                        <span class="day-date">${formatDate(dayDate, { month: "short", day: "numeric" })}</span>
-                    `;
-
-                    const list = document.createElement("ul");
-                    list.className = "task-list";
-
-                    if (tasks.length === 0) {
-                        const empty = document.createElement("li");
-                        empty.className   = "empty-state";
-                        empty.textContent = query ? t.emptyFiltered : t.empty;
-                        list.appendChild(empty);
-                    } else {
-                        tasks.forEach(task => {
-                            const item = document.createElement("li");
-                            item.className       = `task-item ${task.done ? "done" : ""}`;
-                            item.dataset.priority = task.priority || "normal";
-
-                            const check = document.createElement("input");
-                            check.type      = "checkbox";
-                            check.className = "task-check";
-                            check.checked   = task.done;
-                            check.setAttribute("aria-label", task.text);
-                            check.addEventListener("change", () => toggleTask(dayKey, task.id));
-
-                            const mainBtn = document.createElement("button");
-                            mainBtn.type      = "button";
-                            mainBtn.className = "task-main";
-                            mainBtn.addEventListener("click", () => openTaskDialog(dayKey, task.id));
-
-                            const textSpan = document.createElement("span");
-                            textSpan.className   = "task-text";
-                            textSpan.textContent = task.text;
-
-                            const meta = document.createElement("div");
-                            meta.className = "task-meta";
-                            if (task.time) {
-                                const chip = document.createElement("span");
-                                chip.className   = "meta-chip";
-                                chip.textContent = task.time;
-                                meta.appendChild(chip);
-                            }
-                            if (task.priority && task.priority !== "normal") {
-                                const chip = document.createElement("span");
-                                chip.className   = "meta-chip";
-                                chip.textContent = labels[state.lang].priorities[task.priority];
-                                meta.appendChild(chip);
-                            }
-
-                            mainBtn.appendChild(textSpan);
-                            mainBtn.appendChild(meta);
-
-                            const delBtn = document.createElement("button");
-                            delBtn.type      = "button";
-                            delBtn.className = "delete-task";
-                            delBtn.textContent = "×";
-                            delBtn.setAttribute("aria-label", t.delete);
-                            delBtn.addEventListener("click", () => deleteTask(dayKey, task.id));
-
-                            item.appendChild(check);
-                            item.appendChild(mainBtn);
-                            item.appendChild(delBtn);
-                            list.appendChild(item);
-                        });
-                    }
-
-                    const addBtn = document.createElement("button");
-                    addBtn.type      = "button";
-                    addBtn.className = "add-task";
-                    addBtn.textContent = t.addTask;
-                    addBtn.addEventListener("click", () => openTaskDialog(dayKey));
-
-                    const bodyWrap = document.createElement("div");
-                    bodyWrap.style.display = "flex";
-                    bodyWrap.style.flexDirection = "column";
-                    bodyWrap.style.flex = "1";
-                    bodyWrap.style.minWidth = "0";
-                    bodyWrap.appendChild(list);
-                    bodyWrap.appendChild(addBtn);
-
-                    card.appendChild(head);
-                    card.appendChild(bodyWrap);
-                    dom.daysContainer.appendChild(card);
+                    cards.push(`
+                        <div class="day-card ${isPast ? "past-day" : ""} ${isToday ? "today" : ""}">
+                            <div class="day-head">
+                                <span class="day-name">${t.days[dayIndex]}</span>
+                                <span class="day-date">${formatDate(dayDate, { month: "short", day: "numeric" })}</span>
+                            </div>
+                            <div style="display:flex;flex-direction:column;flex:1;min-width:0">
+                                <ul class="task-list">${items}</ul>
+                                <button type="button" class="add-task" data-action="add" data-day-key="${escapeHtml(dayKey)}">${t.addTask}</button>
+                            </div>
+                        </div>`);
                 }
+                dom.daysContainer.innerHTML = cards.join("");
             }
 
             /* ── Task CRUD ────────────────────────────────────────── */
@@ -2333,8 +2552,10 @@
                 if (state.phases.length === 1) { alert(t.lastPhaseWarning); return; }
                 if (!confirm(t.deletePhaseConfirm)) return;
                 state.phases = state.phases.filter(phase => phase.id !== phaseId);
+                // Keys look like "2026-W05-<phaseId>-D3"; match the phase segment exactly
                 Object.keys(state.tasks).forEach(key => {
-                    if (key.includes(`-${phaseId}-`)) delete state.tasks[key];
+                    const match = /^\d+-W\d+-(.+)-D[0-6]$/.exec(key);
+                    if (match && match[1] === phaseId) delete state.tasks[key];
                 });
                 if (state.activePhaseId === phaseId) state.activePhaseId = state.phases[0].id;
                 saveState();
@@ -2363,14 +2584,11 @@
             function countTasksForPhase(phaseId) { return getWeekTasks(phaseId).length; }
 
             function getTasks(dayKey) {
-                if (!state.tasks[dayKey]) return [];
-                state.tasks[dayKey] = state.tasks[dayKey].map(task => normalizeTask(task));
-                return state.tasks[dayKey];
+                return state.tasks[dayKey] || [];
             }
 
             function ensureTaskList(dayKey) {
                 if (!state.tasks[dayKey]) state.tasks[dayKey] = [];
-                state.tasks[dayKey] = state.tasks[dayKey].map(task => normalizeTask(task));
                 return state.tasks[dayKey];
             }
 
@@ -2441,16 +2659,27 @@
                 return status === "past" ? t.past : status === "future" ? t.future : t.current;
             }
 
-            function getPlannerWeekForDate(date) {
-                const start = plannerYearStart(date.getFullYear());
-                const diff  = Math.floor((startOfDay(date) - start) / DAY_MS);
-                return Math.min(Math.floor(diff / 7) + 1, weeksInPlannerYear(date.getFullYear()));
+            // Planner years start on the Saturday on/before Jan 1, so late-December days can belong to the next year
+            function getPlannerYearForDate(date) {
+                const year = date.getFullYear();
+                return startOfDay(date) >= plannerYearStart(year + 1) ? year + 1 : year;
             }
 
+            function getPlannerWeekForDate(date) {
+                const year = getPlannerYearForDate(date);
+                const diff = daysBetween(plannerYearStart(year), date);
+                return Math.min(Math.floor(diff / 7) + 1, weeksInPlannerYear(year));
+            }
+
+            // 52 or 53 weeks depending on where the next year's first Saturday falls
             function weeksInPlannerYear(year) {
-                const start     = plannerYearStart(year);
-                const nextStart = plannerYearStart(year + 1);
-                return Math.round((nextStart - start) / DAY_MS / 7);
+                return daysBetween(plannerYearStart(year), plannerYearStart(year + 1)) / 7;
+            }
+
+            // Whole calendar days between two dates, immune to DST shifts
+            function daysBetween(from, to) {
+                const utc = d => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+                return Math.round((utc(to) - utc(from)) / DAY_MS);
             }
 
             function plannerYearStart(year) {

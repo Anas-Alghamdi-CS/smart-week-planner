@@ -1,11 +1,20 @@
 {
+  "id": "./",
   "name": "مخطط الأسابيع الذكي",
   "short_name": "Week Planner",
-  "description": "مخطط مهام أسبوعي بثيم فاتح وداكن وحسابات محلية منفصلة.",
+  "description": "مخطط مهام أسبوعي ثنائي اللغة بأسابيع تبدأ من السبت، مع مزامنة سحابية وعمل دون اتصال.",
   "start_url": "./",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#F6FAFD",
-  "theme_color": "#0A1931",
+  "orientation": "any",
+  "background_color": "#f6fafd",
+  "theme_color": "#0a1931",
   "dir": "rtl",
-  "lang": "ar"
+  "lang": "ar",
+  "categories": ["productivity", "education"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
 }

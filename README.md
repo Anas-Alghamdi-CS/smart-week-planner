@@ -1,64 +1,105 @@
-# Smart Week Planner
+# Smart Week Planner — مخطط الأسابيع الذكي
 
 ![Status](https://img.shields.io/badge/Status-Live-brightgreen)
 ![GitHub Pages](https://img.shields.io/badge/Hosted-GitHub%20Pages-blue)
 ![Supabase](https://img.shields.io/badge/Auth%20%26%20Sync-Supabase-3FCF8E)
+![PWA](https://img.shields.io/badge/PWA-Installable%20%26%20Offline-5A0FC8)
+![License](https://img.shields.io/badge/License-MIT-lightgrey)
+
+A bilingual (Arabic RTL / English LTR) weekly planner built around the **Saudi work week**: every week starts on **Saturday**. Plan by year → week → phase → day, with cloud sync and full offline support. Zero build steps; the whole app is a single static page.
 
 ## Live Demo
 
-**[Open Smart Week Planner →](https://Anas-Alghamdi-CS.github.io/smart-week-planner/)**
-
-YouTube link: [https://youtu.be/byRg95wtG18](https://youtu.be/byRg95wtG18)
-
----
-
-## Demo Credentials
+**[Open Smart Week Planner →](https://anas-alghamdi-cs.github.io/smart-week-planner/)**
+· [Video walkthrough](https://youtu.be/byRg95wtG18)
 
 | Field | Value |
 |-------|-------|
-| **Email** | `demo@planner.demo` |
-| **Password** | `Planner@2025` |
+| Email | `demo@planner.demo` |
+| Password | `Planner@2025` |
 
-> You can also register a new account directly from the app — no email confirmation required.
-
----
-
-## What It Does
-
-A bilingual (Arabic / English) weekly task planner with:
-
-- 📅 **Weekly navigation** — browse all 52 weeks of any year
-- 🎨 **Phases** — color-coded categories (Study / Work / Personal / custom)
-- ✅ **Daily tasks** — Add, edit, delete, and mark tasks complete per day
-- 🔍 **Search & filter** — search by keyword or filter by status/priority
-- 📊 **Progress stats** — live total, done, remaining, and progress bar
-- 🌙 **Dark / Light mode** — persistent across sessions
-- 🌐 **Bilingual** — full Arabic (RTL) and English (LTR) support
-- ☁️ **Cloud sync** — tasks saved to Supabase and synced across devices
+You can also create your own account from the **Create Account** tab.
 
 ---
 
-## Tech Stack
+## Features
 
-| Layer | Technology |
-|-------|-----------|
-| Frontend | Single-file HTML + Vanilla CSS + Vanilla JavaScript |
-| Authentication | Supabase Auth (email/password) |
-| Data Storage | Supabase (PostgreSQL via REST) + localStorage cache |
-| Hosting | GitHub Pages |
-| PWA | Web App Manifest (installable on mobile) |
+- 📅 **Saturday-based weeks** — every planner year has 52 or 53 whole weeks, with no gaps or overlaps between years.
+- 🎨 **Phases** — Study / Work / Personal out of the box, plus unlimited custom phases with colors.
+- ✅ **Daily tasks** — add, edit, delete, complete; priority and time per task.
+- 🔍 **Search and filters** — by text, status, or high priority; live progress statistics.
+- 🗄️ **Automatic archive view** — past weeks and years stay readable and are clearly marked.
+- ☁️ **Cloud sync** — one state document per user in Supabase, with a visible sync indicator.
+- 📴 **Offline-first** — keeps working without a connection and syncs when it returns.
+- 📲 **Installable PWA** — manifest, icons, and a service worker.
+- 🌙 **Dark / light mode** and **Arabic / English**, remembered across sessions and applied before first paint (no flash).
 
 ---
 
-## Assignment Context
+## Architecture
 
-This project is Assignment 1 (A1) for **AI4101 — Generative AI & Vibe Coding** at Umm Al-Qura University.
+```
+┌────────────────────────────── Browser ──────────────────────────────┐
+│  index.html   UI + app logic (single file, no build step)           │
+│  sw.js        service worker: app-shell cache, offline navigation   │
+│  localStorage per-user state cache + "dirty" flag + theme/lang      │
+└───────────────┬─────────────────────────────────────────────────────┘
+                │ supabase-js (Auth + REST)
+┌───────────────▼─────────────────────────────────────────────────────┐
+│ Supabase:  Auth (email/password)   user_tasks (one jsonb row/user)   │
+└──────────────────────────────────────────────────────────────────────┘
+```
 
-| Layer | Requirement | Status |
-|-------|-------------|--------|
-| A1 | Working SPA deployed on GitHub Pages | ✅ |
-| A2 | Real data persistence (Supabase cloud DB) | ✅ |
-| A3 | Supabase Authentication + GitHub Pages hosting | ✅ |
+### Calendar model
+
+- A planner year starts on the **Saturday on or before January 1**. The year ends the day before the next one starts, so late-December days can belong to week 1 of the following year.
+- Years contain 52 or 53 weeks (for example 2026 has 52, 2027 has 53).
+- Day counting uses calendar days, not milliseconds, so daylight-saving time cannot shift a week.
+- Task keys have the form `YYYY-Www-<phaseId>-D<0..6>`, where `D0` is Saturday. Keys are unique per year, week, phase, and day.
+
+### Data sync
+
+```
+edit ─► write localStorage immediately ─► mark dirty ─► debounce 1.5 s
+     ─► one upsert in flight at a time (always sends the latest state)
+        ├─ success ─► clear dirty flag ─► "Saved"
+        ├─ edits arrived meanwhile ─► sync again
+        └─ failure/offline ─► keep dirty flag ─► retry with back-off, and on the `online` event
+load ─► local edits still marked dirty win; otherwise cloud state replaces the cache
+```
+
+- The dirty flag survives reloads, so offline edits are never overwritten by older cloud data.
+- A status pill shows: **Saved**, **Syncing…**, **Changes waiting**, **Offline**, or **Sync failed — tap to retry**.
+- If the app is launched offline, it reuses the last signed-in identity and its cached planner.
+
+### Database
+
+**Table `user_tasks`** (enable Row-Level Security so each user reads and writes only their own row)
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | uuid | primary key |
+| `user_id` | uuid | unique, references `auth.users` |
+| `state_json` | jsonb | phases, tasks, preferences |
+| `updated_at` | timestamptz | updated on write |
+
+---
+
+## Run Locally
+
+```bash
+git clone https://github.com/Anas-Alghamdi-CS/smart-week-planner.git
+cd smart-week-planner
+python -m http.server 8000   # open http://localhost:8000
+```
+
+Service workers need `http://localhost` or HTTPS, so open the page through a server rather than as a file.
+
+To use your own backend, create a Supabase project, add the `user_tasks` table with a unique `user_id` and RLS policies, and replace `SUPABASE_URL` / `SUPABASE_ANON` in `index.html` (only the public anon key belongs in client code).
+
+## Deploy to GitHub Pages
+
+**Settings → Pages →** deploy from branch `main`, folder `/ (root)`. When you change cached files, bump `CACHE_VERSION` in `sw.js` so installed copies update.
 
 ---
 
@@ -66,50 +107,23 @@ This project is Assignment 1 (A1) for **AI4101 — Generative AI & Vibe Coding**
 
 ```
 smart-week-planner/
-├── index.html            ← Complete single-file app (HTML + CSS + JS)
-├── manifest.webmanifest  ← PWA manifest (mobile install support)
-├── .gitignore            ← Ignores node_modules and OS files
+├── index.html            ← App (markup, styles, logic)
+├── sw.js                 ← Service worker
+├── manifest.webmanifest  ← PWA manifest
+├── icons/                ← 192, 512, and maskable PNG icons
 ├── .nojekyll             ← Disables Jekyll on GitHub Pages
-├── README.md             ← This file
-└── PROMPTS.md            ← AI prompts and design decision log
+├── README.md
+└── PROMPTS.md            ← AI prompts and design decisions log
 ```
 
 ---
 
-## Supabase Schema
+## Academic Context
 
-**Table: `user_tasks`**
+Developed as a course project for **Principles of Artificial Intelligence (مبادئ الذكاء الاصطناعي)** at Umm Al-Qura University.
 
-| Column | Type | Notes |
-|--------|------|-------|
-| id | uuid | Primary key, auto-generated |
-| user_id | uuid | FK → auth.users (unique per user) |
-| state_json | jsonb | Full app state: phases, tasks, preferences |
-| updated_at | timestamptz | Auto-updated on every write |
-
-One row per user — the entire planner state is serialized as a single JSON blob for simplicity.
-
----
-
-## How Data Sync Works
-
-```
-Login → Load from Supabase → fall back to localStorage cache if offline
-Add/edit/delete task → Write to localStorage immediately
-                     → Debounce 1.5s → Upsert to Supabase
-Sign out → Session cleared, auth screen shown
-```
-
----
-
-## Developer
-
-**Student:** Anas Alghamdi  
-**Course:** AI4101 — Generative AI & Vibe Coding  
-**University:** Umm Al-Qura University
-
----
+**Developer:** Anas Alghamdi
 
 ## License
 
-MIT — Academic use
+MIT

@@ -1,6 +1,6 @@
 # PROMPTS.md — Smart Week Planner
 ## AI Prompts & Design Decision Log
-**Course:** AI4101 — Generative AI & Vibe Coding  
+**Course:** Principles of Artificial Intelligence (مبادئ الذكاء الاصطناعي) — Umm Al-Qura University  
 **Assignment:** A1 → A3 Evolution  
 **Student:** Anas Alghamdi
 
@@ -145,7 +145,7 @@ Makes the app installable as a Progressive Web App (PWA) on Android and iOS. Use
 
 ## Tools Used
 
-- **AI Assistant:** Google Gemini (Antigravity) — vibe coding, code generation, debugging
+- **AI Assistant:** Google Gemini (Antigravity) — AI-assisted coding, code generation, debugging
 - **Backend:** Supabase (Auth + PostgreSQL)
 - **Hosting:** GitHub Pages
 - **Version Control:** Git / GitHub
